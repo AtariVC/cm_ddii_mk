@@ -324,8 +324,10 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 							ddii.cm->hvip[0].mode = cm_ptr->ib.command_frame.data[3];
 						}
 						break;
-					case CMD_DBG_GET_DATA_MPP:
+					case CMD_DBG_UPDATE_DATA:
+						mpp->ib->global_dbg_flag = 0x00;
 						ddii_mpp_get_data(&ddii);
+						mpp->ib->global_dbg_flag = 0x01;
 						break;
 					case CM_DBG_CMD_CSA_TEST_ENABLE:
 						if (cm_ptr->ib.command_frame.data[1] == 1){
@@ -335,8 +337,10 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 							ddii.csa_test.enable_test = 0;
 						}
 						break;
-					case CM_DBG_SET_CFG:
+					case CM_DBG_UPDATE_CFG:
+						mpp->ib->global_dbg_flag = 0x00;
 						ddii_update_cfg(&ddii, cm_ptr->ib.command_frame.data);
+						mpp->ib->global_dbg_flag = 0x01;
 						break;
 					case CM_DBG_CMD_CM_RESET:
 						// todo: need to add cm_software or pwr reset
