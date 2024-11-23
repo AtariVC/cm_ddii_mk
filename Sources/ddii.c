@@ -266,11 +266,11 @@ void ddii_download_cfg(typeDDIIStruct* ddii_ptr){
 	memcpy(&ddii_ptr->cfg, ddii_cfg, sizeof(ddii_ptr->cfg));
 	if (status_read_mem >= 0){
 		if (ddii_ptr->cfg.head == HEAD){
-			//ddii_set_cfg(ddii_ptr); // Не работает чтение из ПЗУ
+			ddii_set_cfg(ddii_ptr); // Не работает чтение из ПЗУ
 			//ddii_set_default_cfg(ddii_ptr);
 		}
 		else{
-			//ddii_set_cfg(ddii_ptr);
+			ddii_set_cfg(ddii_ptr);
 			//ddii_set_default_cfg(ddii_ptr);
 			//fr_mem_format(&ddii_ptr->mem);
 		}
@@ -278,15 +278,6 @@ void ddii_download_cfg(typeDDIIStruct* ddii_ptr){
 	else{
 		ddii_set_default_cfg(ddii_ptr);
 	}
-	uint8_t tmp_buf[HVIP_NUM*4*2] = {0};
-	ddii_ptr->mpp->id = ddii_ptr->cfg.mpp_id;
-	ddii_ptr->interval_ms = ddii_ptr->cfg.interval_measure;
-	memcpy(tmp_buf, (uint8_t*)&ddii_ptr->cfg.hvip_voltage, sizeof(ddii_ptr->cfg.hvip_voltage));
-	memcpy(&tmp_buf[HVIP_NUM*4], (uint8_t*)&ddii_ptr->cfg.hvip_pwm_val, HVIP_NUM*4);
-	ddii_cmd_set_voltage_pwm(ddii_ptr, tmp_buf);
-	ddii_ptr->voltage_correction_mode = ddii_ptr->voltage_correction_mode;
-	ddii_set_cfg_mpp(ddii_ptr);
-	ddii_ptr->status_load_cfg = LOADED_CFG;
 }
 
 /**

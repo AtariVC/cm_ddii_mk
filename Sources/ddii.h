@@ -243,7 +243,7 @@ typedef struct
   typeDDIIhvip_AB hvip_AB[HVIP_NUM];
   typeDDIITerm term_struct;
   type_TRES_model term_model[TERM_NUM];
-  uint8_t voltage_correction_mode;
+  uint16_t voltage_correction_mode;
 } typeDDIIStruct;
 
 

@@ -617,7 +617,24 @@
           <Name>(105=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
       </TargetDriverDllRegistry>
-      <Breakpoint/>
+      <Breakpoint>
+        <Bp>
+          <Number>0</Number>
+          <Type>0</Type>
+          <LineNumber>294</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>.\Sources\ddii.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+      </Breakpoint>
       <WatchWindow1>
         <Ww>
           <count>0</count>
@@ -722,45 +739,40 @@
         <Ww>
           <count>20</count>
           <WinNumber>1</WinNumber>
-          <ItemText>ddii.hvip_AB</ItemText>
+          <ItemText>tmp_buf</ItemText>
         </Ww>
         <Ww>
           <count>21</count>
           <WinNumber>1</WinNumber>
-          <ItemText>tmp_buf</ItemText>
+          <ItemText>cm_ptr-&gt;ib</ItemText>
         </Ww>
         <Ww>
           <count>22</count>
           <WinNumber>1</WinNumber>
-          <ItemText>cm_ptr-&gt;ib</ItemText>
+          <ItemText>tmp_buf</ItemText>
         </Ww>
         <Ww>
           <count>23</count>
           <WinNumber>1</WinNumber>
-          <ItemText>tmp_buf</ItemText>
+          <ItemText>cm_ptr-&gt;mko_rt</ItemText>
         </Ww>
         <Ww>
           <count>24</count>
           <WinNumber>1</WinNumber>
-          <ItemText>cm_ptr-&gt;mko_rt</ItemText>
+          <ItemText>ddii_ptr-&gt;cfg</ItemText>
         </Ww>
         <Ww>
           <count>25</count>
           <WinNumber>1</WinNumber>
-          <ItemText>ddii_ptr-&gt;cfg</ItemText>
+          <ItemText>ddii_ptr-&gt;cfg.hvip_voltage</ItemText>
         </Ww>
         <Ww>
           <count>26</count>
           <WinNumber>1</WinNumber>
-          <ItemText>ddii_ptr-&gt;cfg.hvip_voltage</ItemText>
-        </Ww>
-        <Ww>
-          <count>27</count>
-          <WinNumber>1</WinNumber>
           <ItemText>ddii_cfg</ItemText>
         </Ww>
         <Ww>
-          <count>28</count>
+          <count>27</count>
           <WinNumber>1</WinNumber>
           <ItemText>tmp_buf</ItemText>
         </Ww>
