@@ -206,35 +206,35 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
  */
 void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 {
-	typeFrameStruct frame;
-	//
-	if (cm_ptr->ib.command_frame_flag){
-		cm_ptr->ib.command_frame_flag = 0;
-		if (cm_ptr->ib.command_frame.dev_id == CM_SELF_MB_ID){
-			if (cm_ptr->ib.command_frame.f_code == MB_F_CODE_16){
-				switch(cm_ptr->ib.command_frame.reg_addr){
-					case CM_DBG_CMD_SWITCH_ON_OFF:
-						cm_ptr->ib.global_dbg_flag = __REV16(cm_ptr->ib.command_frame.data[0]) & 0x01;
-						break;
-					case CM_DBG_CMD_CM_RESET:
-						// todo: need to add cm_software or pwr reset
-						break;
-					case CM_DBG_CMD_CM_CHECK_MEM:
-						fr_mem_check(&cm_ptr->mem);
-						break;
-					case CM_DBG_CMD_CM_INIT:
-						if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0xAA55) __main_base_init();
-						break;
-					case CM_DBG_CMD_ARCH_REQUEST:
-						if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0x0000){
-							fr_mem_read_data_frame(&cm_ptr->mem, (uint8_t*)&frame);
-							mko_rt_write_to_subaddr(&cm_ptr->mko_rt, CM_MKO_SA_ARCH_READ_CM, (uint16_t*)&frame);
-						}
-						break;
-				}
-			}
-		}
-	}
+	// typeFrameStruct frame;
+	// //
+	// if (cm_ptr->ib.command_frame_flag){
+	// 	cm_ptr->ib.command_frame_flag = 0;
+	// 	if (cm_ptr->ib.command_frame.dev_id == CM_SELF_MB_ID){
+	// 		if (cm_ptr->ib.command_frame.f_code == MB_F_CODE_16){
+	// 			switch(cm_ptr->ib.command_frame.reg_addr){
+	// 				case CM_DBG_CMD_SWITCH_ON_OFF:
+	// 					cm_ptr->ib.global_dbg_flag = __REV16(cm_ptr->ib.command_frame.data[0]) & 0x01;
+	// 					break;
+	// 				case CM_DBG_CMD_CM_RESET:
+	// 					// todo: need to add cm_software or pwr reset
+	// 					break;
+	// 				case CM_DBG_CMD_CM_CHECK_MEM:
+	// 					fr_mem_check(&cm_ptr->mem);
+	// 					break;
+	// 				case CM_DBG_CMD_CM_INIT:
+	// 					if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0xAA55) __main_base_init();
+	// 					break;
+	// 				case CM_DBG_CMD_ARCH_REQUEST:
+	// 					if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0x0000){
+	// 						fr_mem_read_data_frame(&cm_ptr->mem, (uint8_t*)&frame);
+	// 						mko_rt_write_to_subaddr(&cm_ptr->mko_rt, CM_MKO_SA_ARCH_READ_CM, (uint16_t*)&frame);
+	// 					}
+	// 					break;
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 // Обработка callback-функций от перываний

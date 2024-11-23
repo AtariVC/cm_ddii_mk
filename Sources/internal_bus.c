@@ -142,7 +142,8 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 
     }
     else if(ib_ptr->transaction_type == MB_TRANSACTION_WRITE_BROAD){
-    return 1;
+    
+	return 1;
     }
     if (ib_ptr->uart.get_packet(ib_ptr->rx_data, &ib_ptr->rx_len)) {
 		//

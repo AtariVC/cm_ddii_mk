@@ -51,7 +51,7 @@ void tres_update(type_TRES_model* t_res_ptr)
   //
   t_res_ptr->v_out = adc_ch_voltage(t_res_ptr->adc_ptr, t_res_ptr->adc_ch_num);
   t_res_ptr->tres_val = _calc_tr_res(t_res_ptr->v_ref, t_res_ptr->v_out, t_res_ptr->r1_val);
-  t_res_ptr->temp = _linear_interpolation(t_res_ptr->tres_val, cal_temp, cal_res, 16);
+  t_res_ptr->temp = _linear_interpolation(t_res_ptr->tres_val - RES_CONDUCTOR, cal_temp, cal_res, 16);
   t_res_ptr->temp_i16 = (int16_t)(t_res_ptr->temp*256.);
 }
 
@@ -91,13 +91,19 @@ float _linear_interpolation(float x, float* array_y, float* array_x, uint16_t le
   if (x < array_x[0]) return array_y[0];
   if (x > array_x[length-1]) return array_y[length-1];
   //проходим каждый из отрезков, для определения того, куда попадает X
-  for (n=0; n<length-1; n++){
-    if ((x >= array_x[n]) &&  (x <= array_x[n+1])){
-      y = array_y[n] + (array_y[n+1] - array_y[n])*((x - array_x[n])/(array_x[n+1] - array_x[n]));
-      return y;
-    }
-  }
-  return 0;
+  // for (n=0; n<length-1; n++){
+  //   if ((x >= array_x[n]) &&  (x <= array_x[n+1])){
+  //     y = array_y[n] + (array_y[n+1] - array_y[n])*((x - array_x[n])/(array_x[n+1] - array_x[n]));
+  //     return y;
+  //   }
+  // }
+  // return 0;
+
+  // R = - 0.0006 * T * T + 3.9114 * T + 1000.0056;
+  // y = (x - 1000.0056) / 3.9114;
+  y = TRES_APPROX(x);
+  return y;
+
 }
 
 /**

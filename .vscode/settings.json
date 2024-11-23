@@ -37,11 +37,16 @@
   },
   "C_Cpp.errorSquiggles": "Enabled",
   "editor.accessibilityPageSize": 12,
-  "editor.fontSize": 16,
+  "editor.fontSize": 18,
   "bitoAI.codeCompletion.enableAutoCompletion": false,
   "bitoAI.codeCompletion.enableCommentToCode": false,
   "bitoAI.appearance.fontSize": 12,
   "git-graph.customEmojiShortcodeMappings": [
     
+  ],
+  "cSpell.words": [
+    "sipm",
+    "Протоны",
+    "Электроны"
   ]
 }

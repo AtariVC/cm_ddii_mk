@@ -9,7 +9,7 @@
 #define DEBUG
 
 #define DBG_GPIO_PORT PORTE
-#define DBG_GPIO_NUM 13
+#define DBG_GPIO_NUM 12 // 13
 #define DBG_GPIO_ON 1
 #define DBG_GPIO_OFF 0
 

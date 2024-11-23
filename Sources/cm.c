@@ -20,7 +20,7 @@
   */
 void  cm_init(typeCMModel* cm_ptr, uint8_t self_num, uint8_t id, uint16_t device_number, uint16_t frame_type)
 {
-	uint8_t i = 0;
+	// uint8_t i = 0;
 	adc_init(&cm_ptr->adc, ADC0);
 	pwr_init(&cm_ptr->pwr, &cm_ptr->adc);
 	ib_init(&cm_ptr->ib);
@@ -39,10 +39,10 @@ void  cm_init(typeCMModel* cm_ptr, uint8_t self_num, uint8_t id, uint16_t device
 	cm_ptr->device_number = device_number;
 	cm_ptr->frame_type = frame_type;
 	// настройка каналов измерения температуры
-	// при изменении параметров необходимо вынести настроек в .h файл
-	for (i=0; i<4; i++){
-		tres_init(&cm_ptr->tp_res[i], &cm_ptr->adc, 8);
-	}
+	// при изменении параметров необходимо вынести настройки в .h файл
+	// for (i=0; i<4; i++){
+	// 	tres_init(&cm_ptr->tp_res[i], &cm_ptr->adc, 8);
+	// }
 }
 
 /**
@@ -207,7 +207,8 @@ void cm_get_cfg(typeCMModel* cm_ptr)
   */
 int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct* interface)
 {
-	int8_t device = 0, i=0;
+	int8_t device = 0;
+	// int8_t i=0;
 	uint8_t retval=0;
 	typeCMModel* cm_ptr = (typeCMModel*)ctrl_struct;
 	//
@@ -243,7 +244,7 @@ int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 	if (cm_interval_processor(cm_ptr, CM_INTERVAL_DBG, time_us)) {
 		// user code begin
 		//раскомментировать
-		ib_run_transaction(&cm_ptr->ib, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&cm_ptr->frame);
+		//ib_run_transaction(&cm_ptr->ib, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&cm_ptr->frame);
 		// user code end
 		retval = 1;
 	}
@@ -328,9 +329,9 @@ int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 	// обработка отладочных сообщений по ВШ
 	cm_dbg_ib_command_handler(cm_ptr);
 	//обработка каналов измерения температуры
-	for (i=0; i<4; i++){
-		tres_update(&cm_ptr->tp_res[i]);
-	}
+	// for (i=0; i<4; i++){
+	// 	tres_update(&cm_ptr->tp_res[i]);
+	// }
 	return retval;
 }
 
