@@ -105,13 +105,14 @@ typedef union{
   * @brief  структура конфигурфции ддии
   */
 typedef struct {
-	uint16_t head;             // + 0
-	uint16_t mpp_level_trig;   // + 2
-	uint16_t mpp_HH[8];        // + 20
-	float hvip_pwm_val[3];     // + 24
-	float hvip_voltage[3];     // + 28
-  uint16_t mpp_id;           // + 30
-  uint32_t interval_measure; // + 34
+	uint16_t head;             
+	uint16_t mpp_level_trig;   
+	uint16_t mpp_HH[8];        
+	float hvip_pwm_val[3];     
+	float hvip_voltage[3];     
+  uint16_t mpp_id;           
+  uint32_t interval_measure; 
+  uint16_t volt_corr_mode;
 }typeDDII_cfg;
 
 typedef union{
@@ -224,6 +225,7 @@ typedef struct
   //typeDDIICounterParticle counter_particle;
   typeDDII_DB_Telemetria telmtr_struct; 
   typeDDII_Frame_Union dataframe;
+  uint16_t voltage_correction_mode;
 } typeDDIIStruct;
 
 

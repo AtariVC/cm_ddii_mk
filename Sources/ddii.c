@@ -277,7 +277,8 @@ void ddii_set_cfg(typeDDIIStruct* ddii_ptr){
 	memcpy(tmp_buf, (uint8_t*)&ddii_ptr->cfg.hvip_voltage, sizeof(ddii_ptr->cfg.hvip_voltage));
 	memcpy(&tmp_buf[HVIP_NUM*4], (uint8_t*)&ddii_ptr->cfg.hvip_pwm_val, sizeof(ddii_ptr->cfg.hvip_voltage));
 	ddii_cmd_set_voltage_pwm(ddii_ptr, tmp_buf);
-	ddii_ptr->status_load_cfg = LOADED_CFG; 
+	ddii_ptr->voltage_correction_mode = ddii_ptr->voltage_correction_mode;
+	ddii_ptr->status_load_cfg = LOADED_CFG;
 }
 
 /**
