@@ -47,20 +47,51 @@
 #define REG_MPP_LEVEL                 0x0079
 
 
+
+
+#define DDII_EVENT_MEAS_INTERVAL_START       (1<<0)
+#define DDII_EVENT_MEAS_INTERVAL_DATA_READY  (1<<1)
+
+#define DDII_MEAS_NUMBER              0 // было 1
+#define DDII_REC_FIFO_DEPTH           64
+
+#define DDII_MKO_SA_DATA_FRAME        0x0F
+#define DDII_MKO_SA_CTRL              1
+
+#define DDII_MK_COMMAND_LINK_CHECK    0
+#define DDII_MK_COMMAND_SET_MODE      1
+#define DDII_MK_COMMAND_START         2
+#define DDII_MK_COMMAND_CONSTANT_MODE 17
+
+#define HEAD                          0x0FF1
+
+#define REG_MPP_COMAND                0x0000
+#define REG_MPP_LEVEL_TRIG            0x0001
+#define REG_MPP_LEVEL_HH              0x000B
+#define REG_MPP_WAVEFORM              0x0009
+#define REG_MPP_HIST                  0x0014
+#define REG_MPP_CALIBRATE_ADC         0x0050
+#define REG_MPP_TRIGER                0x0051
+#define REG_MPP_FILTR                 0x000A
+#define REG_MPP_STRUCT_DATA           0x0006
+#define REG_MPP_LEVEL                 0x0079
+
+
 #define COMAND_MPP_START_STOP_MEAS    0x0002
 #define COMAND_SEND_FRAME             0x00FE
 
+#define DDII_MPP_ID                   0x000E
 
 #define DELAY_START_MEASURE           1000
 
-/////////////// EVENTS /////////////////
+/////////////// EVENTS /////////////
 #define EVENT_START_MEASURE           0x01
 #define EVENT_STOP_MEASURE            0x00
-/////////////// MODE /////////////////
-#define DEBUG_MODE                    0x0C
-#define SILENT_MODE                   0x0D
-#define COMBAT_MODE                   0x0E
-#define CONSTATNT_MODE                0x0F
+/////////////// MODE ///////////////
+#define DEBUG_MODE                    0x000C
+#define SILENT_MODE                   0x000D
+#define COMBAT_MODE                   0x000E
+#define CONSTATNT_MODE                0x000F
 
 #define PIPS_CH_VOLTAGE               1
 #define SIPM_CH_VOLTAGE               2
@@ -69,6 +100,8 @@
 #define DEFAULT_CFG                   0
 #define LOADED_CFG                    1
 
+#define TERM_NUM 2
+#define TERM_ADC_CHANNELS {12, 11}
 
 //
 #pragma pack(push, 2)
@@ -95,24 +128,28 @@ typedef union{
 }typeDDIIFrameUnion;
 
 /** 
-  * @brief  структура счетчика частиц
+  * @brief  структура данных температуры
   */
-// typedef struct{
-
-// }typeDDIICounterParticle;
+typedef union{
+  struct{
+    float term_sipm_01;
+    float term_cherenkov_02;
+  } ddii_term;
+  float   data_term[TERM_NUM];
+}typeDDIITerm;
 
 /** 
   * @brief  структура конфигурфции ддии
   */
 typedef struct {
-	uint16_t head;             
-	uint16_t mpp_level_trig;   
-	uint16_t mpp_HH[8];        
-	float hvip_pwm_val[3];     
-	float hvip_voltage[3];     
-  uint16_t mpp_id;           
-  uint32_t interval_measure; 
-  uint16_t volt_corr_mode;
+	uint16_t head;                 // + 0
+	uint16_t mpp_level_trig;       // + 2
+	uint16_t mpp_HH[8];            // + 20
+	float    hvip_pwm_val[3];      // + 32
+	float    hvip_voltage[3];      // + 44
+  uint16_t mpp_id;               // + 46
+  uint32_t interval_measure;     // + 50
+  uint16_t volt_corr_mode;       // + 52
 }typeDDII_cfg;
 
 typedef union{
@@ -122,58 +159,58 @@ typedef union{
     uint16_t  Hist16[6];
   }hist;
   struct{
-    uint16_t   HCP_1;             // ТЗЧ E > 1 МэВ
-    uint16_t   HCP_5;             // ТЗЧ E > 5 МэВ
-    uint16_t   HCP_10;            // ТЗЧ E > 10 МэВ
-    uint16_t   HCP_20;            // ТЗЧ E > 20 МэВ
-    uint16_t   HCP_45;            // ТЗЧ E > 45 МэВ
-    uint32_t   electron_0_1;      // Электроны E > 0.1 МэВ
-    uint32_t   electron_0_5;      // Электроны E > 0.5 МэВ
-    uint32_t   electron_0_8;      // Электроны E > 0.8 МэВ
-    uint32_t   electron_1_6;      // Электроны E > 1.6 МэВ
-    uint32_t   electron_3;        // Электроны E > 3 МэВ
-    uint32_t   electron_5;        // Электроны E > 5 МэВ
-    uint16_t   proton_10;         // Протоны E > 10 МэВ
-    uint16_t   proton_30;         // Протоны E > 30 МэВ
-    uint16_t   proton_60;         // Протоны E > 60 МэВ
-    uint16_t   proton_100;        // Протоны E > 100 МэВ
-    uint16_t   proton_200;        // Протоны E > 200 МэВ
-    uint16_t   proton_500;        // Протоны E > 500 МэВ
-  }particle;
+    uint16_t   HCP_1;             // +0 ТЗЧ E > 1 МэВ
+    uint16_t   HCP_5;             // +2 ТЗЧ E > 5 МэВ
+    uint16_t   HCP_10;            // +4 ТЗЧ E > 10 МэВ
+    uint16_t   HCP_20;            // +6 ТЗЧ E > 20 МэВ
+    uint16_t   HCP_45;            // +8 ТЗЧ E > 45 МэВ
+    uint32_t   electron_0_1;      // +10 Электроны E > 0.1 МэВ
+    uint32_t   electron_0_5;      // +14 Электроны E > 0.5 МэВ
+    uint32_t   electron_0_8;      // +16 Электроны E > 0.8 МэВ
+    uint32_t   electron_1_6;      // +20 Электроны E > 1.6 МэВ
+    uint32_t   electron_3;        // +24 Электроны E > 3 МэВ
+    uint32_t   electron_5;        // +28 Электроны E > 5 МэВ
+    uint16_t   proton_10;         // +32 Протоны E > 10 МэВ
+    uint16_t   proton_30;         // +34 Протоны E > 30 МэВ
+    uint16_t   proton_60;         // +36 Протоны E > 60 МэВ
+    uint16_t   proton_100;        // +38 Протоны E > 100 МэВ
+    uint16_t   proton_200;        // +40 Протоны E > 200 МэВ
+    uint16_t   proton_500;        // +42 Протоны E > 500 МэВ
+  }particle;                      // +44
 }typeDDII_Particle_Union;
 
 typedef struct{
-  float     v_hv;
-  float     hv_pwm;
-  float     hv_curent;
-  uint8_t   hv_mode;
-}typeDDII_HVIP_Data;
+  float     v_hv;                  // + 0
+  float     hv_pwm;                // + 4
+  float     hv_curent;             // + 8
+  uint8_t   hv_mode;               // + 12
+}typeDDII_HVIP_Data;               // + 13
 
 typedef struct{
-  uint8_t                 ddii_mode; // +0
-  uint16_t                HH[8]; //
-  uint16_t                Level;
-  typeDDII_HVIP_Data      hvip_data[HVIP_NUM];
-  uint8_t                 csa_test_on;
-  uint16_t                ddii_interval_request;
-  uint16_t                ACQ1_Peack;
-  uint16_t                ACQ2_Peack;
-  typeDDII_Particle_Union particle_telmtr;
-}typeDDII_DB_Telemetria;
+  uint16_t                ddii_mode;              // + 0
+  uint16_t                HH[8];                  // + 2
+  uint16_t                Level;                  // + 18
+  typeDDII_HVIP_Data      hvip_data[HVIP_NUM];    // + 20
+  uint8_t                 csa_test_on;            // + 59
+  uint16_t                ddii_interval_request;  // + 60
+  uint16_t                ACQ1_Peack;             // + 62
+  uint16_t                ACQ2_Peack;             // + 64
+  typeDDII_Particle_Union particle_telmtr;        // + 66
+}typeDDII_DB_Telemetria;                          // + 110
 
 /** 
   * @brief  структура данных МПП
   */
 typedef struct{
-  uint16_t TmpCount; // Колличество импульсов /+0
-  uint16_t ACQ1_Peak; // Пик ADC_A /+2
-  uint16_t ACQ2_Peak; // Пик ADC_B /+4
-  uint16_t DDIN_Peak; // Маска состояни цифровых каналов (0-4) 11111 - все каналы находятся в 1 (DIO 1, 3, 5, 7, 9)
-  uint16_t BinNum; // Номер последнего инкрементированного бина /+8
-  uint16_t HH[8]; // Уровни 8 карманов 5 электроны и 3 протона /+10
+  uint16_t TmpCount;    // Колличество импульсов /+0
+  uint16_t ACQ1_Peak;   // Пик ADC_A /+2
+  uint16_t ACQ2_Peak;   // Пик ADC_B /+4
+  uint16_t DDIN_Peak;   // Маска состояни цифровых каналов (0-4) 11111 - все каналы находятся в 1 (DIO 1, 3, 5, 7, 9)
+  uint16_t BinNum;      // Номер последнего инкрементированного бина /+8
+  uint16_t HH[8];       // Уровни 8 карманов 5 электроны и 3 протона /+10
   uint16_t res2;
   typeDDII_Particle_Union particle; //+50
-  uint16_t Level; //+60
+  uint16_t Level; //+60 // Уровень триггера
 }typeDDII_Data_MPP;
 
 typedef union{
@@ -185,15 +222,21 @@ typedef union{
   }frame;
 }typeDDII_Frame_Union;
 
+typedef struct{
+  float a_u;
+  float b_u;
+  float a_i;
+  float b_i;
+}typeDDIIhvip_AB;
 
 typedef struct
 {
   // interfaces
   typeMKOStruct* mko_bc_ptr;
   // сfg
-	uint16_t mko_addr;			          // id на внутренней шине
-	uint16_t mko_bus;			          // id на внутренней шине
-	uint16_t self_num;          // номер устройства с точки зрения ЦМ
+	uint16_t mko_addr;			             // id на внутренней шине
+	uint16_t mko_bus;			               // id на внутренней шине
+	uint16_t self_num;                   // номер устройства с точки зрения ЦМ
 	uint16_t device_number, frame_type;  //параметры прибора МПП, в котором он используется
   uint16_t interval_ms;
   uint32_t *global_frame_num_ptr;
@@ -210,13 +253,14 @@ typedef struct
   // general
   // cyclogram_ctrl
   typeCyclogramma meas_cyclo;
+  typeCyclogramma term_cyclo;
   typeMPPStruct* mpp;
   typeCMModel* cm;
   typeFRAME_MEM mem;
   typeDDII_cfg cfg;
   uint8_t mpp_on_off;
   typeDDII_Data_MPP ddii_mpp_data;
-  uint8_t mode;
+  uint16_t mode;
   uint8_t event;
   uint8_t frame_ptr;
   uint64_t curent_time_measure;
@@ -225,7 +269,10 @@ typedef struct
   //typeDDIICounterParticle counter_particle;
   typeDDII_DB_Telemetria telmtr_struct; 
   typeDDII_Frame_Union dataframe;
-  uint16_t voltage_correction_mode;
+  typeDDIIhvip_AB hvip_AB[HVIP_NUM];
+  typeDDIITerm term_struct;
+  type_TRES_model term_model[TERM_NUM];
+  uint8_t voltage_correction_mode;
 } typeDDIIStruct;
 
 
@@ -284,7 +331,10 @@ void ddii_update_voltage(typeDDIIStruct* ddii_ptr);
 void ddii_cmd_set_voltage_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data);
 void ddii_set_cfg(typeDDIIStruct* ddii_ptr);
 void reverse_data(uint8_t* data, uint16_t* out_data);
-
+void ddii_hvip_set_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data);
+void ddii_hvip_get_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data);
+void ddii_term(typeDDIIStruct* ddii_ptr);
+void ddii_term_cycl_start(void* ctrl_struct);
 
 //
 // void ddii_power_detector_on(type_SINGLE_GPIO* ddii_gpio_ptr);

@@ -6,13 +6,17 @@
 #include "1986ve8_lib/cm4ikmcu.h"
 #include "adc.h"
 
-#define TRES_V_REF    (3.3)
-#define TRES_R1_REF   (1E3) // 1k Ohm
+#define TRES_V_REF    (4.77)
+#define TRES_R1_REF   (3E3) // 3k Ohm
 
 #define TRES_TYPE     (1E3) // Pt1000
 
+#define RES_CONDUCTOR  (7) // Сопротивление проводника
+
 #define TRES_CAL_TEMP {-100, -50, -40, -30. -20, -10, -00, +10, +20, +30, +40, +50, +100, +200, +200, +200}
 #define TRES_CAL_RES  {602.6, 803.1, 842.7, 882.2, 921.6, 960.9, 1000.0, 1039.0, 1077.9, 1116.7, 1155.4, 1194.0, 1385, 1758.4, 1758.4, 1758.4}
+
+#define TRES_APPROX(R) (6519.0 / 2.0 - (6519.0 / 2.0) * (1.0 + (-4.0 * ((R) - 1000.0056) / (6519.0 * 6519.0 * 0.0006)) / 2.0 - ((-4.0 * ((R) - 1000.0056) / (6519.0 * 6519.0 * 0.0006)) * (-4.0 * ((R) - 1000.0056) / (6519.0 * 6519.0 * 0.0006))) / 8.0))
 
 #define TRES_CHANNELS_NUM 4
 #define TRES_ADC_CHANNELS {8, 9, 10, 11}
