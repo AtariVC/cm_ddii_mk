@@ -253,7 +253,6 @@ typedef struct
   // general
   // cyclogram_ctrl
   typeCyclogramma meas_cyclo;
-  typeCyclogramma term_cyclo;
   typeMPPStruct* mpp;
   typeCMModel* cm;
   typeFRAME_MEM mem;
@@ -269,10 +268,11 @@ typedef struct
   //typeDDIICounterParticle counter_particle;
   typeDDII_DB_Telemetria telmtr_struct; 
   typeDDII_Frame_Union dataframe;
+  uint8_t voltage_correction_mode;
   typeDDIIhvip_AB hvip_AB[HVIP_NUM];
   typeDDIITerm term_struct;
   type_TRES_model term_model[TERM_NUM];
-  uint8_t voltage_correction_mode;
+  typeCyclogramma term_cyclo;
 } typeDDIIStruct;
 
 
