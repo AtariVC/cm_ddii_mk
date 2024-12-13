@@ -207,7 +207,9 @@ void cm_get_cfg(typeCMModel* cm_ptr)
   */
 int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct* interface)
 {
-	int8_t device = 0;
+
+	int8_t device = 0; //, i=0;
+
 	uint8_t retval=0;
 	typeCMModel* cm_ptr = (typeCMModel*)ctrl_struct;
 	//

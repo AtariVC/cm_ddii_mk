@@ -99,6 +99,7 @@ float _linear_interpolation(float x, float* array_y, float* array_x, uint16_t le
   // }
   y = TRES_APPROX(x);
   return y;
+
 }
 
 /**

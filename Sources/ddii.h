@@ -15,6 +15,7 @@
 #include "internal_bus.h"
 #include "timers.h"
 #include "cm.h"
+#include "termo_res.h"
 
 // дефайны для переменных
 #define DDII_DEFAULT_INTERVAL_S (10)
@@ -87,7 +88,8 @@
 /////////////// EVENTS /////////////
 #define EVENT_START_MEASURE           0x01
 #define EVENT_STOP_MEASURE            0x00
-/////////////// MODE ///////////////
+
+/////////////// MODE /////////////////
 #define DEBUG_MODE                    0x000C
 #define SILENT_MODE                   0x000D
 #define COMBAT_MODE                   0x000E
@@ -102,7 +104,6 @@
 
 #define TERM_NUM 2
 #define TERM_ADC_CHANNELS {12, 11}
-
 //
 #pragma pack(push, 2)
 
@@ -127,6 +128,18 @@ typedef union{
   } ddii;
 }typeDDIIFrameUnion;
 
+
+/** 
+  * @brief  структура данных температуры
+  */
+typedef union{
+  struct{
+    float term_sipm_01;
+    float term_cherenkov_02;
+  } ddii_term;
+  float   data_term[TERM_NUM];
+}typeDDIITerm;
+
 /** 
   * @brief  структура данных температуры
   */
@@ -145,8 +158,8 @@ typedef struct {
 	uint16_t head;                 // + 0
 	uint16_t mpp_level_trig;       // + 2
 	uint16_t mpp_HH[8];            // + 20
-	float    hvip_pwm_val[3];      // + 32
-	float    hvip_voltage[3];      // + 44
+	float    hvip_pwm_val[HVIP_NUM];      // + 32
+	float    hvip_voltage[HVIP_NUM];      // + 44
   uint16_t mpp_id;               // + 46
   uint32_t interval_measure;     // + 50
   uint16_t volt_corr_mode;       // + 52
@@ -193,8 +206,8 @@ typedef struct{
   float b_i;
 }typeDDIIhvip_AB;
 
-
 typedef struct{
+
   uint16_t                ddii_mode;              // + 0
   uint16_t                HH[8];                  // + 2
   uint16_t                Level;                  // + 18
@@ -230,6 +243,12 @@ typedef union{
   }frame;
 }typeDDII_Frame_Union;
 
+typedef struct{
+  float a_u;
+  float b_u;
+  float a_i;
+  float b_i;
+}typeDDIIhvip_AB;
 
 
 typedef struct
