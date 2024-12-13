@@ -644,13 +644,12 @@ void ddii_struct_telemetria_forming(typeDDIIStruct* ddii_ptr){
 	memcpy(ddii_ptr->telmtr_struct.particle_telmtr.hist.HCP, ddii_ptr->dataframe.frame.particle.hist.HCP, sizeof(ddii_ptr->ddii_mpp_data.particle.hist.HCP));
 	memcpy(ddii_ptr->telmtr_struct.HH, ddii_ptr->ddii_mpp_data.HH, sizeof(ddii_ptr->ddii_mpp_data.HH));
 }
-
 void ddii_update_voltage(typeDDIIStruct* ddii_ptr){
 	uint8_t i;
 	for(i = 0; i < HVIP_NUM; i++){
 		ddii_ptr->telmtr_struct.hvip_data[i].v_hv = ddii_ptr->cm->hvip[i].v_hv;
 		ddii_ptr->telmtr_struct.hvip_data[i].hv_pwm = ddii_ptr->cm->hvip[i].pwm_val_float;
-		ddii_ptr->telmtr_struct.hvip_data[i].hv_curent = ddii_ptr->cm->hvip[i].current;
+		ddii_ptr->telmtr_struct.hvip_data[i].hv_current = ddii_ptr->cm->hvip[i].current;
 		ddii_ptr->telmtr_struct.hvip_data[i].hv_mode = ddii_ptr->cm->hvip[i].mode;
 	}
 }
@@ -719,10 +718,10 @@ void ddii_term_cycl_start(void* ctrl_struct)
 	if (ddii_ptr->voltage_correction_mode == 1){
 		ddii_set_sipm_voltage_correction(ddii_ptr);
 	}
-	else{
-		ddii_ptr->cm->hvip[HVIP0_CH].v_hv_desired = ddii_ptr->cfg.hvip_voltage[HVIP0_CH]; 	  // cherenkov
-		ddii_ptr->cm->hvip[HVIP2_SIPM].v_hv_desired = ddii_ptr->cfg.hvip_voltage[HVIP2_SIPM]; // sipm
-	}
+	// else{
+	// 	ddii_ptr->cm->hvip[HVIP0_CH].v_hv_desired = ddii_ptr->cfg.hvip_voltage[HVIP0_CH]; 	  // cherenkov
+	// 	ddii_ptr->cm->hvip[HVIP2_SIPM].v_hv_desired = ddii_ptr->cfg.hvip_voltage[HVIP2_SIPM]; // sipm
+	// }
 }
 
 /**

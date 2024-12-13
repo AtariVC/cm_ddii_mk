@@ -288,7 +288,8 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 {
 	typeFrameStruct frame;
-	uint16_t tmp_buf[200] = {0xFEFE};;
+	uint16_t tmp_buf[200] = {0xFEFE};
+	uint8_t i;
 	//
 	if (cm_ptr->ib.command_frame_flag){
 		cm_ptr->ib.command_frame_flag = 0;
@@ -436,6 +437,14 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 						memcpy(tmp_buf, (uint16_t*)&ddii.hvip_AB, sizeof(typeDDIIhvip_AB)*HVIP_NUM);
 						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
 						mpp->ib->global_dbg_flag = 0x00;
+						break;
+					case CM_DBG_GET_DESIRED_HVIP:
+						mpp->ib->global_dbg_flag = 0x01;
+						for(i = 0; i < HVIP_NUM; i++){
+							ddii.desired_hv[i] = cm_ptr->hvip[i].v_hv_desired;
+						}
+						memcpy(tmp_buf, (uint16_t*)&ddii.desired_hv, sizeof(ddii.desired_hv)*HVIP_NUM);
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
 						break;
 					case CM_GET_TERM:
 						memcpy(tmp_buf, (uint16_t*)&ddii.term_struct, sizeof(ddii.term_struct));

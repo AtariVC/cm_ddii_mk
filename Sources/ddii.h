@@ -182,9 +182,17 @@ typedef union{
 typedef struct{
   float     v_hv;                  // + 0
   float     hv_pwm;                // + 4
-  float     hv_curent;             // + 8
+  float     hv_current;             // + 8
   uint8_t   hv_mode;               // + 12
 }typeDDII_HVIP_Data;               // + 13
+
+typedef struct{
+  float a_u;
+  float b_u;
+  float a_i;
+  float b_i;
+}typeDDIIhvip_AB;
+
 
 typedef struct{
   uint16_t                ddii_mode;              // + 0
@@ -222,12 +230,7 @@ typedef union{
   }frame;
 }typeDDII_Frame_Union;
 
-typedef struct{
-  float a_u;
-  float b_u;
-  float a_i;
-  float b_i;
-}typeDDIIhvip_AB;
+
 
 typedef struct
 {
@@ -273,6 +276,7 @@ typedef struct
   typeDDIITerm term_struct;
   type_TRES_model term_model[TERM_NUM];
   typeCyclogramma term_cyclo;
+  float desired_hv[HVIP_NUM];
 } typeDDIIStruct;
 
 

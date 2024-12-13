@@ -570,7 +570,7 @@ void ddii_update_voltage(typeDDIIStruct* ddii_ptr){
 	for(i = 0; i < 3; i++){
 		ddii_ptr->telmtr_struct.hvip_data[i].v_hv = ddii_ptr->cm->hvip[i].v_hv;
 		ddii_ptr->telmtr_struct.hvip_data[i].hv_pwm = ddii_ptr->cm->hvip[i].pwm_val_float;
-		ddii_ptr->telmtr_struct.hvip_data[i].hv_curent = ddii_ptr->cm->hvip[i].current;
+		ddii_ptr->telmtr_struct.hvip_data[i].hv_current = ddii_ptr->cm->hvip[i].current;
 		ddii_ptr->telmtr_struct.hvip_data[i].hv_mode = ddii_ptr->cm->hvip[i].mode;
 	}
 }
