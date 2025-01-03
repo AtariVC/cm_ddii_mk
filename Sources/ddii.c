@@ -154,6 +154,8 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 	return retval;
 }
 
+
+//////// MKO /////////
 void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr){
 	uint16_t ctrl_data[32];
 	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->frame, sizeof(ddii_ptr->frame));
@@ -162,6 +164,53 @@ void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr){
 							ddii_ptr->mko_addr, 
 							DDII_MKO_SA_CTRL, 
 							ddii_ptr->mko_bus, 
+							ctrl_data, 32);
+}
+
+void ddii_get_mko_mpp_config_data(typeDDIIStruct* ddii_ptr){
+	uint16_t ctrl_data[32] = {0}, tmp_data[110] = {0};
+	memcpy(tmp_data, (uint16_t*)&ddii_ptr->telmtr_struct, 110);
+	memcpy(ctrl_data, &tmp_data[2], 2*9);
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr, 
+							MKO_MODE_WRITE, 
+							ddii_ptr->mko_addr, 
+							DDII_MKO_SA_CTRL, 
+							ddii_ptr->mko_bus, 
+							ctrl_data, 32);
+}
+
+void ddii_get_mko_hvip(typeDDIIStruct* ddii_ptr, uint16_t ch){
+	uint16_t ctrl_data[32] = {0};
+	ddii_update_voltage(ddii_ptr);
+	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->telmtr_struct.hvip_data[ch], sizeof(typeDDII_HVIP_Data));
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr,
+							MKO_MODE_WRITE,
+							ddii_ptr->mko_addr,
+							DDII_MKO_SA_CTRL,
+							ddii_ptr->mko_bus,
+							ctrl_data, 32);
+}
+
+void ddii_get_mko_temp(typeDDIIStruct* ddii_ptr){
+	uint16_t ctrl_data[32] = {0};
+	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->term_struct, sizeof(ddii_ptr->term_struct));
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr, 
+							MKO_MODE_WRITE, 
+							ddii_ptr->mko_addr,
+							DDII_MKO_SA_CTRL,
+							ddii_ptr->mko_bus,
+							ctrl_data, 32);
+}
+
+void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr){
+	uint16_t ctrl_data[32] = {0};
+	ddii_read_frame_inmem(ddii_ptr);
+	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->frame, sizeof(ddii_ptr->frame));
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr, 
+							MKO_MODE_WRITE, 
+							ddii_ptr->mko_addr,
+							DDII_MKO_SA_CTRL,
+							ddii_ptr->mko_bus,
 							ctrl_data, 32);
 }
 
@@ -218,6 +267,7 @@ void ddii_meas_cycl_frame_forming(void* ctrl_struct)
 {
 	typeDDIIStruct* ddii_ptr = (typeDDIIStruct*) ctrl_struct;
 	ddii_frame_forming(ddii_ptr);
+	ddii_write_frame_inmem(ddii_ptr);
 }
 
 void ddii_frame_struct_forming(typeDDIIStruct* ddii_ptr){
@@ -488,7 +538,6 @@ int8_t ddii_frame_forming(typeDDIIStruct* ddii_ptr)
 				// ddii_put_data_in_row_frame_mko(ddii_ptr);
 			// 	// memcpy((uint8_t*)&ddii_ptr->frame.row.data, (uint8_t*)&rec_tmp, sizeof(typeDDIIRec));
 			// }
-			
 			//
 			ddii_ptr->frame.row.crc16 = frame_crc16((uint8_t*)&ddii_ptr->frame.row, sizeof(typeFrameStruct) - 2);
 			//
@@ -498,7 +547,6 @@ int8_t ddii_frame_forming(typeDDIIStruct* ddii_ptr)
 		else{
 			return 0;
 		}
-
 }
 
 /**
@@ -600,6 +648,16 @@ int8_t ddii_read_fifo(typeDDIIStruct* ddii_ptr, typeDDIIRec* data)
 	}
 }
 
+
+void ddii_write_frame_inmem(typeDDIIStruct* ddii_ptr){
+	fr_mem_write_data_frame(&ddii_ptr->mem, (uint8_t*)&ddii_ptr->frame);
+}
+
+void ddii_read_frame_inmem(typeDDIIStruct* ddii_ptr){
+	fr_mem_read_data_frame(&ddii_ptr->mem, (uint8_t*)&ddii_ptr->frame);
+}
+
+
 /**
  * @brief переварачивание байт внутр 16-ти битных переменных
  * 
@@ -638,12 +696,15 @@ void ddii_struct_telemetria_forming(typeDDIIStruct* ddii_ptr){
 	ddii_ptr->telmtr_struct.ddii_interval_request   =	ddii_ptr->interval_ms;
 	ddii_ptr->telmtr_struct.ACQ1_Peack   			=	ddii_ptr->ddii_mpp_data.ACQ1_Peak;
 	ddii_ptr->telmtr_struct.ACQ2_Peack   			=	ddii_ptr->ddii_mpp_data.ACQ2_Peak;
+	ddii_ptr->telmtr_struct.rd_ptr					=	ddii_ptr->mem.read_ptr;
+	ddii_ptr->telmtr_struct.wr_ptr					=	ddii_ptr->mem.write_ptr;
 	ddii_update_voltage(ddii_ptr);
 	memcpy(ddii_ptr->telmtr_struct.particle_telmtr.hist.Hist32, ddii_ptr->dataframe.frame.particle.hist.Hist32, sizeof(ddii_ptr->ddii_mpp_data.particle.hist.Hist32));
 	memcpy(ddii_ptr->telmtr_struct.particle_telmtr.hist.Hist16, ddii_ptr->dataframe.frame.particle.hist.Hist16, sizeof(ddii_ptr->ddii_mpp_data.particle.hist.Hist16));
 	memcpy(ddii_ptr->telmtr_struct.particle_telmtr.hist.HCP, ddii_ptr->dataframe.frame.particle.hist.HCP, sizeof(ddii_ptr->ddii_mpp_data.particle.hist.HCP));
 	memcpy(ddii_ptr->telmtr_struct.HH, ddii_ptr->ddii_mpp_data.HH, sizeof(ddii_ptr->ddii_mpp_data.HH));
 }
+
 void ddii_update_voltage(typeDDIIStruct* ddii_ptr){
 	uint8_t i;
 	for(i = 0; i < HVIP_NUM; i++){

@@ -183,7 +183,7 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 					case (CMD_INIT):
 						// __main_base_init();
 						break;
-					case (7):
+					case (CMD_REC_FRAME):
 						ddii_send_mko_frame(&ddii);
 						// формирование команды
 						// ctrl_data[1] = 0x0FF1;
@@ -252,6 +252,23 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 						ddii_mpp_set_level_hh(&ddii);
 						ddii_download_cfg_inmem(&ddii);
 						break;
+					case (CM_SET_LEVEL_TRIG):
+						memcpy(&ddii.cfg.mpp_level_trig, &cm_ptr->mko_rt.data[1], 2 * 1);
+						ddii_mpp_set_level_hh(&ddii);
+						ddii_download_cfg_inmem(&ddii);
+					case (CM_GET_CONFIG_DATA_MPP):
+						ddii_get_mko_mpp_config_data(&ddii);
+					case (CM_GET_HVIP): /// TODO: объеденить результаты hvip и term
+						ddii_get_mko_hvip(&ddii, cm_ptr->mko_rt.data[1]);
+					case (CM_GET_TEMP):
+						ddii_get_mko_temp(&ddii);
+					case (CM_SET_DEFAULT_CFG):
+						ddii_set_default_cfg(&ddii);
+					case (CM_CSA_TEST):
+						ddii.csa_test.enable_test = cm_ptr->mko_rt.data[1];
+						/// TODO: выдать результат проверки
+					case (CM_READ_MEM):
+						ddii_mko_read_mem(&ddii);
 				}
 				break;
 			// case CM_MKO_SA_ARCH_REQUEST_CM:
@@ -341,12 +358,7 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 						mpp->ib->global_dbg_flag = 0x00;
 						break;
 					case CM_DBG_CMD_CSA_TEST_ENABLE:
-						if (cm_ptr->ib.command_frame.data[1] == 1){
-							ddii.csa_test.enable_test = 1;
-						}
-						else{
-							ddii.csa_test.enable_test = 0;
-						}
+						ddii.csa_test.enable_test = cm_ptr->ib.command_frame.data[1];
 						break;
 					case CM_DBG_UPDATE_CFG:
 						mpp->ib->global_dbg_flag= 0x01;
@@ -387,7 +399,7 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 						break;
 					case SET_DEFAULT_CFG:
 						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
-						fr_mem_format(&ddii.mem);
+						// fr_mem_format(&ddii.mem);
 						ddii_set_default_cfg(&ddii);
 						break;
 					case SET_VOLTAGE_CORRECTION_MODE:

@@ -141,17 +141,6 @@ typedef union{
 }typeDDIITerm;
 
 /** 
-  * @brief  структура данных температуры
-  */
-typedef union{
-  struct{
-    float term_sipm_01;
-    float term_cherenkov_02;
-  } ddii_term;
-  float   data_term[TERM_NUM];
-}typeDDIITerm;
-
-/** 
   * @brief  структура конфигурфции ддии
   */
 typedef struct {
@@ -207,7 +196,6 @@ typedef struct{
 }typeDDIIhvip_AB;
 
 typedef struct{
-
   uint16_t                ddii_mode;              // + 0
   uint16_t                HH[8];                  // + 2
   uint16_t                Level;                  // + 18
@@ -217,7 +205,9 @@ typedef struct{
   uint16_t                ACQ1_Peack;             // + 62
   uint16_t                ACQ2_Peack;             // + 64
   typeDDII_Particle_Union particle_telmtr;        // + 66
-}typeDDII_DB_Telemetria;                          // + 110
+  uint16_t                rd_ptr;                 // +110
+  uint16_t                wr_ptr;                 // +112
+}typeDDII_DB_Telemetry;                          // + 114
 
 /** 
   * @brief  структура данных МПП
@@ -242,13 +232,6 @@ typedef union{
     uint32_t   common_count_1_6;  // Счетчик общего числа  E > 1.6 МэВ
   }frame;
 }typeDDII_Frame_Union;
-
-typedef struct{
-  float a_u;
-  float b_u;
-  float a_i;
-  float b_i;
-}typeDDIIhvip_AB;
 
 
 typedef struct
@@ -288,7 +271,7 @@ typedef struct
   uint64_t curent_time;
   type_CSA_TEST_Struct csa_test;
   //typeDDIICounterParticle counter_particle;
-  typeDDII_DB_Telemetria telmtr_struct; 
+  typeDDII_DB_Telemetry telmtr_struct; 
   typeDDII_Frame_Union dataframe;
   uint8_t voltage_correction_mode;
   typeDDIIhvip_AB hvip_AB[HVIP_NUM];
@@ -296,6 +279,7 @@ typedef struct
   type_TRES_model term_model[TERM_NUM];
   typeCyclogramma term_cyclo;
   float desired_hv[HVIP_NUM];
+  uint16_t write_inmem_flag;
 } typeDDIIStruct;
 
 
@@ -358,6 +342,14 @@ void ddii_hvip_set_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data);
 void ddii_hvip_get_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data);
 void ddii_term(typeDDIIStruct* ddii_ptr);
 void ddii_term_cycl_start(void* ctrl_struct);
+void ddii_get_mko_mpp_config_data(typeDDIIStruct* ddii_ptr);
+void ddii_get_mko_hvip_temp(typeDDIIStruct* ddii_ptr);
+void ddii_get_mko_temp(typeDDIIStruct* ddii_ptr);
+void ddii_get_mko_hvip(typeDDIIStruct* ddii_ptr, uint16_t ch);
+void ddii_write_frame_inmem(typeDDIIStruct* ddii_ptr);
+void ddii_read_frame_inmem(typeDDIIStruct* ddii_ptr);
+void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr);
+void ddii_mko_write_mem(typeDDIIStruct* ddii_ptr);
 
 //
 // void ddii_power_detector_on(type_SINGLE_GPIO* ddii_gpio_ptr);
