@@ -31,8 +31,8 @@ typedef enum PWR_CH
   * @note   длина совпадает с PWR_CH_NUMBER
   */
 #define PWR_ADC_CH_NUM {1, 5, 7, 9}
-#define PWR_CAL_RES_SHUNT_OHM {0.5, 0.5, 0.5, 4.7}
-#define PWR_CAL_FB_SHUNT_OHM {51E3, 51E3, 51E3, 10E3}
+#define PWR_CAL_RES_SHUNT_OHM {0.5, 4.7, 4.7, 4.7}
+#define PWR_CAL_FB_SHUNT_OHM {51E3, 10E3, 10E3, 10E3}
 
 #define PWR_CURRENT_BOUND {3*150, 3*55, 3*55, 3*36}
 

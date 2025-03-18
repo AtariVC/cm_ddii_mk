@@ -385,7 +385,7 @@ void reverse_data(uint8_t* data, uint16_t* out_data){
 void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
 	uint16_t level_hh[8] = {0, 64, 128, 256, 512, 1024, 1100, 1200};
 	uint16_t level_trig[2] = {REG_MPP_LEVEL_TRIG, 10}, i; // {Команда МПП, Уровень}
-	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {24, 24, 24};
+	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {27, 27, 27};
 	ddii_ptr->cfg.mpp_id = DDII_MPP_ID;
 	memcpy(ddii_ptr->cfg.hvip_pwm_val, pwm_buf, sizeof(pwm_buf));
 	memcpy(ddii_ptr->cfg.hvip_voltage, voltage_buf, sizeof(voltage_buf));

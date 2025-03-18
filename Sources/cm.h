@@ -48,7 +48,7 @@ enum cm_interval_list
 	CM_INTERV_NUMBER
 };
 #define DEFAULT_CM_INTERV_VALUES_S					{1800, 600, 2, 30, 1}
-#define DEFAULT_CM_DEFAULT_START_TIME_S				{5, 5, 0, 6, 6}
+#define DEFAULT_CM_DEFAULT_START_TIME_S				{5, 5, 5, 6, 6}
 
 #define CM_EVENT_MEAS_INTERVAL_START       			(1<<0)
 #define CM_EVENT_MEAS_INTERVAL_DATA_READY  			(1<<1)
@@ -154,14 +154,16 @@ enum hvip_channels_list
 #define HVIP_MODE_DEFAULT {HVIP_MODE_ON, HVIP_MODE_ON, HVIP_MODE_ON}
 #define HVIP_ADC_CH_NUM_VOLTAGE {2, 6, 4}
 #define HVIP_ADC_CH_NUM_CURRENT {1, 3, 5}
-#define HVIP_PWM_VAL_DEFAULT {0, 0, 0} // {20.43, 17.4, 17.806}
-#define HVIP_DESIRED_VOLTAGE {24.0, 24.0, 24.0} // {28.0, 40.0, 34.0} (ch, pips, sipm)
+#define HVIP_PWM_VAL_DEFAULT {0, 19, 0} // {20.43, 17.4, 17.806}
+#define HVIP_DESIRED_VOLTAGE {24.0, 40.0, 24.0} // {28.0, 40.0, 34.0} (ch, pips, sipm)
 #define HVIP_MAXIMUM_CURRENT {100.0, 100.0, 100.0}
-#define HVIP_A_U {40, 40, 40}
+#define HVIP_A_U {200, 200, 200}
 #define HVIP_B_U {0, 0, 0}
-#define HVIP_A_I {100, 100, 100}
+#define HVIP_A_I {111, 111, 111}
 #define HVIP_B_I {0.0, 0.0, 0.0}
-
+// r_sh = 0.9 сопротивление для измерения тока 
+// r_fb = 10к сопротивление обратной связи
+// A_I = 1E6/(r_sh*r_fb); 
 //структуры кадров
 #pragma pack(push, 2)
 
