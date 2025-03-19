@@ -108,6 +108,10 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 		// user code end
 		retval = 1;
 	}
+	// отложенный запуск hvip
+	deferred_launch_hvip(ddii_ptr, time_us, 1, 1, 6E8);
+	// отложенный запуск mpp
+	deferred_launch_hvip(ddii_ptr, time_us, 1, 1, 5E6);
 	// проверка режима
 	if(ddii_ptr->mode != SILENT_MODE){
 		// обработка event-ов  //todo: сделать специальные фукнции обработки event-ов
@@ -154,6 +158,11 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 	return retval;
 }
 
+void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint64_t current_time_us, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us){
+	if (current_time_us > deferred_time_us){
+		pwr_on_off_by_num(&ddii_ptr->cm->pwr, 1, 1);
+	} 
+}
 
 //////// MKO /////////
 void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr){

@@ -30,7 +30,7 @@ typedef enum PWR_CH
   * @brief  распределение каналов в соответствии с enum PWR_CH
   * @note   длина совпадает с PWR_CH_NUMBER
   */
-#define PWR_ADC_CH_NUM {1, 5, 7, 9}
+#define PWR_ADC_CH_NUM {1, 5, 7, 9} // (__, pow, mpp, __)
 #define PWR_CAL_RES_SHUNT_OHM {0.5, 4.7, 4.7, 4.7}
 #define PWR_CAL_FB_SHUNT_OHM {51E3, 10E3, 10E3, 10E3}
 
@@ -39,11 +39,11 @@ typedef enum PWR_CH
 #define PWR_GPIO_PORT_ON {NULL, NULL, NULL, NULL}
 #define PWR_GPIO_NUM_ON {NULL, NULL, NULL, NULL}
 
-#define PWR_GPIO_PORT_OFF {NULL, PORTC, PORTC, NULL}
-#define PWR_GPIO_NUM_OFF {NULL, 15, 16, NULL}
+#define PWR_GPIO_PORT_OFF {NULL, PORTC, PORTC, NULL} // {NULL, PORTC, PORTC, NULL}
+#define PWR_GPIO_NUM_OFF {NULL, 15, 16, NULL} // {NULL, 15, 16, NULL} (__, pow, mpp, __)
 
-#define PWR_CHANNELS_TYPES {NU, FLAG, FLAG, NU}
-#define PWR_AUTO_CTRL {0, 0, 0, 0} //указываем те каналы, которые мы можем отключать или включать автоматически
+#define PWR_CHANNELS_TYPES {NU, FLAG, FLAG, NU} //  {NU, FLAG, FLAG, NU} 
+#define PWR_AUTO_CTRL {0, 1, 1, 0} //указываем те каналы, которые мы можем отключать или включать автоматически
 
 
 #define PWR_PROCESS_PERIOD 100
