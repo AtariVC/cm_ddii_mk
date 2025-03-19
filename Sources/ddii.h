@@ -350,7 +350,7 @@ void ddii_write_frame_inmem(typeDDIIStruct* ddii_ptr);
 void ddii_read_frame_inmem(typeDDIIStruct* ddii_ptr);
 void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr);
 void ddii_mko_write_mem(typeDDIIStruct* ddii_ptr);
-void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint64_t current_time_us, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us);
+void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us);
 
 // void ddii_power_detector_on(type_SINGLE_GPIO* ddii_gpio_ptr);
 #endif
