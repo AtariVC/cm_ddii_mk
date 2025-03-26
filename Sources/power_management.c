@@ -125,9 +125,9 @@ void pwr_init(typePower* pwr_ptr, typeADCStruct* adc_ptr)
 	//
 	pwr_ptr->state = 0x0000;
 	pwr_ptr->status = 0x0000;
-	for (i=0; i<PWR_CH_NUMBER; i++){
-		pwr_ptr->state |= (1<<i);
-	}
+	// for (i=0; i<PWR_CH_NUMBER; i++){
+	// 	pwr_ptr->state |= (1<<i);
+	// }
 	//
 	for (i=0; i<PWR_CH_NUMBER; i++){
 		__pwr_calc_current_coefficients(r_sh_arr[i], r_fb_arr[i], &adc_a, &adc_b);

@@ -48,7 +48,7 @@ enum cm_interval_list
 	CM_INTERV_NUMBER
 };
 #define DEFAULT_CM_INTERV_VALUES_S					{1800, 600, 2, 30, 1}
-#define DEFAULT_CM_DEFAULT_START_TIME_S				{5, 5, 0, 6, 6}
+#define DEFAULT_CM_DEFAULT_START_TIME_S				{5, 5, 5, 6, 6}
 
 #define CM_EVENT_MEAS_INTERVAL_START       			(1<<0)
 #define CM_EVENT_MEAS_INTERVAL_DATA_READY  			(1<<1)
@@ -159,10 +159,12 @@ enum hvip_channels_list
 #define HVIP_MAXIMUM_CURRENT {100.0, 100.0, 100.0}
 #define HVIP_A_U {41, 41, 41}
 #define HVIP_B_U {0, 0, 0}
-#define HVIP_A_I {100, 100, 100}
+#define HVIP_A_I {111, 111, 111}
 #define HVIP_B_I {0.0, 0.0, 0.0}
+
 #define HVIP_PWM_VAL_MAX {20.7, 22.7, 21.7}
 #define TYPE_REGULATION {PID_TYPE, LINER_TYPE, PID_TYPE} // 0 - pid регуляция, 1 - линейная
+
 
 //структуры кадров
 #pragma pack(push, 2)

@@ -108,6 +108,10 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 		// user code end
 		retval = 1;
 	}
+	// отложенный запуск hvip
+	deferred_launch_hvip(ddii_ptr, 1, 1, 10E6);
+	// отложенный запуск mpp
+	deferred_launch_hvip(ddii_ptr, 2, 2, 5E6);
 	// проверка режима
 	if(ddii_ptr->mode != SILENT_MODE){
 		// обработка event-ов  //todo: сделать специальные фукнции обработки event-ов
@@ -154,6 +158,13 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 	return retval;
 }
 
+void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us){
+	if ((ddii_ptr->cm->pwr.state & (1<<ch_num)) == 0x0){
+		if (ddii_ptr->curent_time > deferred_time_us){
+			pwr_on_off_by_num(&ddii_ptr->cm->pwr, ch_num, state);
+		} 
+	}
+}
 
 //////// MKO /////////
 void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr){
@@ -385,7 +396,7 @@ void reverse_data(uint8_t* data, uint16_t* out_data){
 void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
 	uint16_t level_hh[8] = {0, 64, 128, 256, 512, 1024, 1100, 1200};
 	uint16_t level_trig[2] = {REG_MPP_LEVEL_TRIG, 10}, i; // {Команда МПП, Уровень}
-	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {24, 24, 24};
+	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {27, 27, 27};
 	ddii_ptr->cfg.mpp_id = DDII_MPP_ID;
 	memcpy(ddii_ptr->cfg.hvip_pwm_val, pwm_buf, sizeof(pwm_buf));
 	memcpy(ddii_ptr->cfg.hvip_voltage, voltage_buf, sizeof(voltage_buf));
