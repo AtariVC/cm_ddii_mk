@@ -39,7 +39,8 @@ void ddii_init(typeDDIIStruct* ddii_ptr,
             uint8_t mko_bus,
             uint32_t* gl_fr_num){
 	//                     
-	
+	int i;
+	uint8_t adc_chan[TERM_NUM] = TERM_ADC_CHANNELS;
 	ddii_ptr->mko_addr = mko_addr;
 	ddii_ptr->mko_bus = mko_bus;
 	ddii_ptr->device_number = device_number;
@@ -54,6 +55,11 @@ void ddii_init(typeDDIIStruct* ddii_ptr,
 	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_S;
 	ddii_ptr->mode = COMBAT_MODE;
 	ddii_ptr->status_load_cfg = DEFAULT_CFG;
+	ddii_ptr->voltage_correction_mode = 0;
+	for (i = 0; i<TERM_NUM; i++){
+		tres_init(&ddii_ptr->term_model[i], &cm->adc, adc_chan[i]);	
+	} // ADC11 - TERM2 (CH), ADC12 - TERM1 (sipm), ADC13 - TERM4, ADC14 - TERM3
+
 	// fr_mem_init(&ddii_ptr->mem, FR_MEM_TYPE_WR_TO_RD);
 	// fr_mem_set_rd_ptr(&ddii_ptr->mem, 0);
 	// fr_mem_set_wr_ptr(&ddii_ptr->mem, 0);
@@ -102,6 +108,10 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 		// user code end
 		retval = 1;
 	}
+	// отложенный запуск hvip
+	deferred_launch_hvip(ddii_ptr, 1, 1, 10E6);
+	// отложенный запуск mpp
+	deferred_launch_hvip(ddii_ptr, 2, 2, 5E6);
 	// проверка режима
 	if(ddii_ptr->mode != SILENT_MODE){
 		// обработка event-ов  //todo: сделать специальные фукнции обработки event-ов
@@ -141,9 +151,22 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 		if (ddii_ptr->meas_cyclo.mode != CYCLO_MODE_WORK)
 			cyclo_stop(&ddii_ptr->meas_cyclo);
 	}
+	if (ddii_ptr->term_cyclo.mode != CYCLO_MODE_WORK){
+		cyclo_start(&ddii_ptr->term_cyclo);
+	}
+	cyclo_handler(&ddii_ptr->term_cyclo, time_us/1000);
 	return retval;
 }
 
+void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us){
+	if ((ddii_ptr->cm->pwr.state & (1<<ch_num)) == 0x0){
+		if (ddii_ptr->curent_time > deferred_time_us){
+			pwr_on_off_by_num(&ddii_ptr->cm->pwr, ch_num, state);
+		} 
+	}
+}
+
+//////// MKO /////////
 void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr){
 	uint16_t ctrl_data[32];
 	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->frame, sizeof(ddii_ptr->frame));
@@ -152,6 +175,53 @@ void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr){
 							ddii_ptr->mko_addr, 
 							DDII_MKO_SA_CTRL, 
 							ddii_ptr->mko_bus, 
+							ctrl_data, 32);
+}
+
+void ddii_get_mko_mpp_config_data(typeDDIIStruct* ddii_ptr){
+	uint16_t ctrl_data[32] = {0}, tmp_data[110] = {0};
+	memcpy(tmp_data, (uint16_t*)&ddii_ptr->telmtr_struct, 110);
+	memcpy(ctrl_data, &tmp_data[2], 2*9);
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr, 
+							MKO_MODE_WRITE, 
+							ddii_ptr->mko_addr, 
+							DDII_MKO_SA_CTRL, 
+							ddii_ptr->mko_bus, 
+							ctrl_data, 32);
+}
+
+void ddii_get_mko_hvip(typeDDIIStruct* ddii_ptr, uint16_t ch){
+	uint16_t ctrl_data[32] = {0};
+	ddii_update_voltage(ddii_ptr);
+	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->telmtr_struct.hvip_data[ch], sizeof(typeDDII_HVIP_Data));
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr,
+							MKO_MODE_WRITE,
+							ddii_ptr->mko_addr,
+							DDII_MKO_SA_CTRL,
+							ddii_ptr->mko_bus,
+							ctrl_data, 32);
+}
+
+void ddii_get_mko_temp(typeDDIIStruct* ddii_ptr){
+	uint16_t ctrl_data[32] = {0};
+	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->term_struct, sizeof(ddii_ptr->term_struct));
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr, 
+							MKO_MODE_WRITE, 
+							ddii_ptr->mko_addr,
+							DDII_MKO_SA_CTRL,
+							ddii_ptr->mko_bus,
+							ctrl_data, 32);
+}
+
+void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr){
+	uint16_t ctrl_data[32] = {0};
+	ddii_read_frame_inmem(ddii_ptr);
+	memcpy(ctrl_data, (uint16_t*)&ddii_ptr->frame, sizeof(ddii_ptr->frame));
+	mko_bc_transaction_start(ddii_ptr->mko_bc_ptr, 
+							MKO_MODE_WRITE, 
+							ddii_ptr->mko_addr,
+							DDII_MKO_SA_CTRL,
+							ddii_ptr->mko_bus,
 							ctrl_data, 32);
 }
 
@@ -164,11 +234,15 @@ void ddii_meas_cycl_init(typeDDIIStruct* ddii_ptr)
 {
 	// циклограмма инициализации МПП
 	cyclo_init(&ddii_ptr->meas_cyclo);
+	cyclo_init(&ddii_ptr->term_cyclo);
 	//
 	ddii_ptr->meas_cyclo.mode = CYCLO_MODE_WORK;
 	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_start, (void*)ddii_ptr, ddii_ptr->interval_ms);
 	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_read, (void*)ddii_ptr, 0);
 	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_frame_forming, (void*)ddii_ptr, 0);
+
+	ddii_ptr->term_cyclo.mode = CYCLO_MODE_WORK;
+	cyclo_add_step(&ddii_ptr->term_cyclo, ddii_term_cycl_start, (void*)ddii_ptr, 1000);
 }
 
 /**
@@ -204,6 +278,7 @@ void ddii_meas_cycl_frame_forming(void* ctrl_struct)
 {
 	typeDDIIStruct* ddii_ptr = (typeDDIIStruct*) ctrl_struct;
 	ddii_frame_forming(ddii_ptr);
+	ddii_write_frame_inmem(ddii_ptr);
 }
 
 void ddii_frame_struct_forming(typeDDIIStruct* ddii_ptr){
@@ -321,13 +396,13 @@ void reverse_data(uint8_t* data, uint16_t* out_data){
 void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
 	uint16_t level_hh[8] = {0, 64, 128, 256, 512, 1024, 1100, 1200};
 	uint16_t level_trig[2] = {REG_MPP_LEVEL_TRIG, 10}, i; // {Команда МПП, Уровень}
-	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {24, 24, 24};
-	ddii_ptr->cfg.mpp_id = 15;
+	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {27, 27, 27};
+	ddii_ptr->cfg.mpp_id = DDII_MPP_ID;
 	memcpy(ddii_ptr->cfg.hvip_pwm_val, pwm_buf, sizeof(pwm_buf));
 	memcpy(ddii_ptr->cfg.hvip_voltage, voltage_buf, sizeof(voltage_buf));
 	memcpy((uint16_t*)&ddii_ptr->cfg.mpp_HH, (uint16_t*)&level_hh, sizeof(level_hh));
 	memcpy((uint8_t*)&ddii_ptr->cfg.mpp_level_trig, (uint8_t*)&level_trig[1], sizeof(level_trig[1]));
-	ddii_ptr->cfg.head = 0x0FF1;
+	ddii_ptr->cfg.head = HEAD;
 	for (i = 0; i < sizeof(level_hh)/2; i++){
 		level_hh[i] = __REV16(level_hh[i]);
 	}
@@ -344,6 +419,7 @@ void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
 		ddii_ptr->mpp->ib->global_dbg_flag = 0x01;
 	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_S;
 	ddii_ptr->cfg.interval_measure = DDII_DEFAULT_INTERVAL_S;
+	ddii_ptr->cfg.volt_corr_mode = 0;
 	// ddii_download_cfg_inmem(ddii_ptr);
 	ddii_ptr->status_load_cfg = DEFAULT_CFG;
 }
@@ -459,7 +535,7 @@ int8_t ddii_frame_forming(typeDDIIStruct* ddii_ptr)
 	// typeDDIIRec rec_tmp;
 		//
 		if (ddii_ptr->rec_num >= DDII_MEAS_NUMBER){
-			ddii_ptr->frame.row.label = 0x0FF1;
+			ddii_ptr->frame.row.label = HEAD;
 			ddii_ptr->frame.row.definer = frame_definer(0, ddii_ptr->device_number, NULL, ddii_ptr->frame_type);
 			ddii_ptr->frame.row.num = (*ddii_ptr->global_frame_num_ptr++)&0xFFFF;
 			ddii_ptr->frame.row.time = Get_Time_s();
@@ -473,7 +549,6 @@ int8_t ddii_frame_forming(typeDDIIStruct* ddii_ptr)
 				// ddii_put_data_in_row_frame_mko(ddii_ptr);
 			// 	// memcpy((uint8_t*)&ddii_ptr->frame.row.data, (uint8_t*)&rec_tmp, sizeof(typeDDIIRec));
 			// }
-			
 			//
 			ddii_ptr->frame.row.crc16 = frame_crc16((uint8_t*)&ddii_ptr->frame.row, sizeof(typeFrameStruct) - 2);
 			//
@@ -483,7 +558,6 @@ int8_t ddii_frame_forming(typeDDIIStruct* ddii_ptr)
 		else{
 			return 0;
 		}
-
 }
 
 /**
@@ -585,6 +659,16 @@ int8_t ddii_read_fifo(typeDDIIStruct* ddii_ptr, typeDDIIRec* data)
 	}
 }
 
+
+void ddii_write_frame_inmem(typeDDIIStruct* ddii_ptr){
+	fr_mem_write_data_frame(&ddii_ptr->mem, (uint8_t*)&ddii_ptr->frame);
+}
+
+void ddii_read_frame_inmem(typeDDIIStruct* ddii_ptr){
+	fr_mem_read_data_frame(&ddii_ptr->mem, (uint8_t*)&ddii_ptr->frame);
+}
+
+
 /**
  * @brief переварачивание байт внутр 16-ти битных переменных
  * 
@@ -617,12 +701,14 @@ void ddii_cmd_set_voltage_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data){
 }
 
 void ddii_struct_telemetria_forming(typeDDIIStruct* ddii_ptr){
-	ddii_ptr->telmtr_struct.ddii_mode = 				ddii_ptr->mode;
-	ddii_ptr->telmtr_struct.Level = 					ddii_ptr->ddii_mpp_data.Level;
-	ddii_ptr->telmtr_struct.csa_test_on = 				ddii_ptr->csa_test.enable_test;
-	ddii_ptr->telmtr_struct.ddii_interval_request = 	ddii_ptr->interval_ms;
-	ddii_ptr->telmtr_struct.ACQ1_Peack = 				ddii_ptr->ddii_mpp_data.ACQ1_Peak;
-	ddii_ptr->telmtr_struct.ACQ2_Peack = 				ddii_ptr->ddii_mpp_data.ACQ2_Peak;
+	ddii_ptr->telmtr_struct.ddii_mode   			=	ddii_ptr->mode;
+	ddii_ptr->telmtr_struct.Level   				=	ddii_ptr->ddii_mpp_data.Level;
+	ddii_ptr->telmtr_struct.csa_test_on   			=	ddii_ptr->csa_test.enable_test;
+	ddii_ptr->telmtr_struct.ddii_interval_request   =	ddii_ptr->interval_ms;
+	ddii_ptr->telmtr_struct.ACQ1_Peack   			=	ddii_ptr->ddii_mpp_data.ACQ1_Peak;
+	ddii_ptr->telmtr_struct.ACQ2_Peack   			=	ddii_ptr->ddii_mpp_data.ACQ2_Peak;
+	ddii_ptr->telmtr_struct.rd_ptr					=	ddii_ptr->mem.read_ptr;
+	ddii_ptr->telmtr_struct.wr_ptr					=	ddii_ptr->mem.write_ptr;
 	ddii_update_voltage(ddii_ptr);
 	memcpy(ddii_ptr->telmtr_struct.particle_telmtr.hist.Hist32, ddii_ptr->dataframe.frame.particle.hist.Hist32, sizeof(ddii_ptr->ddii_mpp_data.particle.hist.Hist32));
 	memcpy(ddii_ptr->telmtr_struct.particle_telmtr.hist.Hist16, ddii_ptr->dataframe.frame.particle.hist.Hist16, sizeof(ddii_ptr->ddii_mpp_data.particle.hist.Hist16));
@@ -635,9 +721,79 @@ void ddii_update_voltage(typeDDIIStruct* ddii_ptr){
 	for(i = 0; i < HVIP_NUM; i++){
 		ddii_ptr->telmtr_struct.hvip_data[i].v_hv = ddii_ptr->cm->hvip[i].v_hv;
 		ddii_ptr->telmtr_struct.hvip_data[i].hv_pwm = ddii_ptr->cm->hvip[i].pwm_val_float;
-		ddii_ptr->telmtr_struct.hvip_data[i].hv_curent = ddii_ptr->cm->hvip[i].current;
+		ddii_ptr->telmtr_struct.hvip_data[i].hv_current = ddii_ptr->cm->hvip[i].current;
 		ddii_ptr->telmtr_struct.hvip_data[i].hv_mode = ddii_ptr->cm->hvip[i].mode;
 	}
+}
+
+void ddii_hvip_set_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data){
+	uint8_t tmp_buf[HVIP_NUM*4], i;
+  //
+	memset(tmp_buf, 0x00, sizeof(tmp_buf));
+	memcpy(tmp_buf, data, sizeof(tmp_buf));
+	for(i =0; i < HVIP_NUM; i++){
+		memcpy(&ddii_ptr->cm->hvip[i].a_u, &tmp_buf[i*4], sizeof(ddii_ptr->cm->hvip->a_u));
+	}
+	memset(tmp_buf, 0x00, sizeof(tmp_buf));
+	memcpy(tmp_buf, &data[HVIP_NUM*4], sizeof(tmp_buf));
+	for(i = 0; i < HVIP_NUM; i++){
+		memcpy(&ddii_ptr->cm->hvip[i].b_u, &tmp_buf[i*4], sizeof(ddii_ptr->cm->hvip->b_u));
+	}
+	memset(tmp_buf, 0x00, sizeof(tmp_buf));
+	memcpy(tmp_buf, &data[HVIP_NUM*4*2], sizeof(tmp_buf));
+	for(i = 0; i < HVIP_NUM; i++){
+		memcpy(&ddii_ptr->cm->hvip[i].a_i, &tmp_buf[i*4], sizeof(ddii_ptr->cm->hvip->a_i));
+	}
+	memset(tmp_buf, 0x00, sizeof(tmp_buf));
+	memcpy(tmp_buf, &data[HVIP_NUM*4*3], sizeof(tmp_buf));
+	for(i = 0; i < HVIP_NUM; i++){
+		memcpy(&ddii_ptr->cm->hvip[i].b_i, &tmp_buf[i*4], sizeof(ddii_ptr->cm->hvip->b_i));
+	}
+}
+
+void ddii_hvip_get_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data){
+	uint8_t i;
+	for(i = 0; i < HVIP_NUM; i++){
+		ddii_ptr->hvip_AB[i].a_u = ddii_ptr->cm->hvip[i].a_u;
+		ddii_ptr->hvip_AB[i].b_u = ddii_ptr->cm->hvip[i].b_u;
+		ddii_ptr->hvip_AB[i].a_i = ddii_ptr->cm->hvip[i].a_i;
+		ddii_ptr->hvip_AB[i].b_i = ddii_ptr->cm->hvip[i].b_i;
+	}
+}
+
+void ddii_term(typeDDIIStruct* ddii_ptr){
+	int i;
+	for (i = 0; i < TERM_NUM; i++){
+		tres_update(&ddii_ptr->term_model[i]);
+		ddii_ptr->term_struct.data_term[i] = ddii_ptr->term_model[i].temp;
+	}
+}
+
+void ddii_set_sipm_voltage_correction(typeDDIIStruct* ddii_ptr){
+	float v_corr_ch, v_corr_sipm;
+	// Поправка с учетом теплового коэффцинта 0.022 мВ/град
+	v_corr_ch = ddii_ptr->cfg.hvip_voltage[HVIP0_CH] + 0.022 * (ddii_ptr->term_struct.ddii_term.term_cherenkov_02 - 10);
+	ddii_ptr->cm->hvip[HVIP0_CH].v_hv_desired = v_corr_ch; // cherenkov
+
+	v_corr_sipm = ddii_ptr->cfg.hvip_voltage[HVIP2_SIPM] + 0.022 * (ddii_ptr->term_struct.ddii_term.term_cherenkov_02 - 10);
+	ddii_ptr->cm->hvip[HVIP2_SIPM].v_hv_desired = v_corr_sipm; // sipm
+}
+
+/**
+  * @brief  обертка функция для согласования типов
+  * @param  ctrl_struct указатель на структуру управления
+  */
+void ddii_term_cycl_start(void* ctrl_struct)
+{
+	typeDDIIStruct* ddii_ptr = (typeDDIIStruct*) ctrl_struct;
+	ddii_term(ddii_ptr);
+	if (ddii_ptr->voltage_correction_mode == 1){
+		ddii_set_sipm_voltage_correction(ddii_ptr);
+	}
+	// else{
+	// 	ddii_ptr->cm->hvip[HVIP0_CH].v_hv_desired = ddii_ptr->cfg.hvip_voltage[HVIP0_CH]; 	  // cherenkov
+	// 	ddii_ptr->cm->hvip[HVIP2_SIPM].v_hv_desired = ddii_ptr->cfg.hvip_voltage[HVIP2_SIPM]; // sipm
+	// }
 }
 
 /**

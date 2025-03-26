@@ -48,6 +48,36 @@
 #define REG_MPP_LEVEL                 0x0079
 
 
+
+
+#define DDII_EVENT_MEAS_INTERVAL_START       (1<<0)
+#define DDII_EVENT_MEAS_INTERVAL_DATA_READY  (1<<1)
+
+#define DDII_MEAS_NUMBER              0 // было 1
+#define DDII_REC_FIFO_DEPTH           64
+
+#define DDII_MKO_SA_DATA_FRAME        0x0F
+#define DDII_MKO_SA_CTRL              1
+
+#define DDII_MK_COMMAND_LINK_CHECK    0
+#define DDII_MK_COMMAND_SET_MODE      1
+#define DDII_MK_COMMAND_START         2
+#define DDII_MK_COMMAND_CONSTANT_MODE 17
+
+#define HEAD                          0x0FF1
+
+#define REG_MPP_COMAND                0x0000
+#define REG_MPP_LEVEL_TRIG            0x0001
+#define REG_MPP_LEVEL_HH              0x000B
+#define REG_MPP_WAVEFORM              0x0009
+#define REG_MPP_HIST                  0x0014
+#define REG_MPP_CALIBRATE_ADC         0x0050
+#define REG_MPP_TRIGER                0x0051
+#define REG_MPP_FILTR                 0x000A
+#define REG_MPP_STRUCT_DATA           0x0006
+#define REG_MPP_LEVEL                 0x0079
+
+
 #define COMAND_MPP_START_STOP_MEAS    0x0002
 #define COMAND_SEND_FRAME             0x00FE
 
@@ -55,9 +85,10 @@
 
 #define DELAY_START_MEASURE           1000
 
-/////////////// EVENTS /////////////////
+/////////////// EVENTS /////////////
 #define EVENT_START_MEASURE           0x01
 #define EVENT_STOP_MEASURE            0x00
+
 /////////////// MODE /////////////////
 #define DEBUG_MODE                    0x000C
 #define SILENT_MODE                   0x000D
@@ -110,13 +141,6 @@ typedef union{
 }typeDDIITerm;
 
 /** 
-  * @brief  структура счетчика частиц
-  */
-// typedef struct{
-
-// }typeDDIICounterParticle;
-
-/** 
   * @brief  структура конфигурфции ддии
   */
 typedef struct {
@@ -160,9 +184,16 @@ typedef union{
 typedef struct{
   float     v_hv;                  // + 0
   float     hv_pwm;                // + 4
-  float     hv_curent;             // + 8
+  float     hv_current;             // + 8
   uint8_t   hv_mode;               // + 12
 }typeDDII_HVIP_Data;               // + 13
+
+typedef struct{
+  float a_u;
+  float b_u;
+  float a_i;
+  float b_i;
+}typeDDIIhvip_AB;
 
 typedef struct{
   uint16_t                ddii_mode;              // + 0
@@ -174,7 +205,9 @@ typedef struct{
   uint16_t                ACQ1_Peack;             // + 62
   uint16_t                ACQ2_Peack;             // + 64
   typeDDII_Particle_Union particle_telmtr;        // + 66
-}typeDDII_DB_Telemetria;                          // + 110
+  uint16_t                rd_ptr;                 // +110
+  uint16_t                wr_ptr;                 // +112
+}typeDDII_DB_Telemetry;                          // + 114
 
 /** 
   * @brief  структура данных МПП
@@ -200,12 +233,6 @@ typedef union{
   }frame;
 }typeDDII_Frame_Union;
 
-typedef struct{
-  float a_u;
-  float b_u;
-  float a_i;
-  float b_i;
-}typeDDIIhvip_AB;
 
 typedef struct
 {
@@ -237,19 +264,22 @@ typedef struct
   typeDDII_cfg cfg;
   uint8_t mpp_on_off;
   typeDDII_Data_MPP ddii_mpp_data;
-  uint8_t mode;
+  uint16_t mode;
   uint8_t event;
   uint8_t frame_ptr;
   uint64_t curent_time_measure;
   uint64_t curent_time;
   type_CSA_TEST_Struct csa_test;
   //typeDDIICounterParticle counter_particle;
-  typeDDII_DB_Telemetria telmtr_struct; 
+  typeDDII_DB_Telemetry telmtr_struct; 
   typeDDII_Frame_Union dataframe;
-  uint16_t voltage_correction_mode;
+  uint8_t voltage_correction_mode;
   typeDDIIhvip_AB hvip_AB[HVIP_NUM];
   typeDDIITerm term_struct;
   type_TRES_model term_model[TERM_NUM];
+  typeCyclogramma term_cyclo;
+  float desired_hv[HVIP_NUM];
+  uint16_t write_inmem_flag;
 } typeDDIIStruct;
 
 
@@ -308,8 +338,19 @@ void ddii_update_voltage(typeDDIIStruct* ddii_ptr);
 void ddii_cmd_set_voltage_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data);
 void ddii_set_cfg(typeDDIIStruct* ddii_ptr);
 void reverse_data(uint8_t* data, uint16_t* out_data);
+void ddii_hvip_set_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data);
+void ddii_hvip_get_coef_a_b(typeDDIIStruct* ddii_ptr, uint8_t* data);
+void ddii_term(typeDDIIStruct* ddii_ptr);
+void ddii_term_cycl_start(void* ctrl_struct);
+void ddii_get_mko_mpp_config_data(typeDDIIStruct* ddii_ptr);
+void ddii_get_mko_hvip_temp(typeDDIIStruct* ddii_ptr);
+void ddii_get_mko_temp(typeDDIIStruct* ddii_ptr);
+void ddii_get_mko_hvip(typeDDIIStruct* ddii_ptr, uint16_t ch);
+void ddii_write_frame_inmem(typeDDIIStruct* ddii_ptr);
+void ddii_read_frame_inmem(typeDDIIStruct* ddii_ptr);
+void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr);
+void ddii_mko_write_mem(typeDDIIStruct* ddii_ptr);
+void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us);
 
-
-//
 // void ddii_power_detector_on(type_SINGLE_GPIO* ddii_gpio_ptr);
 #endif

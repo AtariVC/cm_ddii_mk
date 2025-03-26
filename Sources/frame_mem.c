@@ -31,9 +31,9 @@ int8_t fr_mem_init(typeFRAME_MEM* mem_ptr, uint8_t mode)
 }
 
 /**
-  * @brief  запись произвольного кадра в память БДД
-  * @param  mem_ptr указатель на програмную модель памяти БДД
-  * @param  addr адрес кадра в общей памяти (единица - один кадр)
+  * @brief  запись произвольного кадра в память
+  * @param  mem_ptr указатель на програмную модель памяти
+  * @param  addr адрес кадра в общей памяти (единица - первый кадр)
   * @param  frame указатель на кадр
   * @retval статус инициализации
   */
@@ -45,7 +45,7 @@ int8_t fr_mem_write_any_frame(typeFRAME_MEM* mem_ptr, uint32_t addr, uint8_t* fr
 /**
   * @brief  чтение произвольного кадра из памяти БДД
   * @param  mem_ptr указатель на програмную модель памяти БДД
-  * @param  addr адрес кадра в общей памяти (единица - один кадр)
+  * @param  addr адрес кадра в общей памяти (единица - первый кадр)
   * @param  frame указатель на кадр
   * @retval статус инициализации
   */
@@ -114,7 +114,7 @@ int8_t fr_mem_incr_wr_ptr(typeFRAME_MEM* mem_ptr)
 
 /**
   * @brief  инкрементация указателя записи
-  * @param  mem_ptr указатель на програмную модель памяти БДД
+  * @param  mem_ptr указатель на програмную модель памяти
   */
 uint32_t __fr_mem_calc_prot_area_ptr(typeFRAME_MEM* mem_ptr)
 {
@@ -130,7 +130,7 @@ uint32_t __fr_mem_calc_prot_area_ptr(typeFRAME_MEM* mem_ptr)
 
 /**
   * @brief  инкрементация указателя чтения
-  * @param  mem_ptr указатель на програмную модель памяти БДД
+  * @param  mem_ptr указатель на програмную модель памяти
   * @retval 1 - прочтется новый кадр, 0 - прочтется старый кадр
   */
 int8_t fr_mem_incr_rd_ptr(typeFRAME_MEM* mem_ptr)
@@ -254,7 +254,7 @@ void fr_mem_format(typeFRAME_MEM* mem_ptr)
 
 /**
   * @brief  сохранение параметров в начало каждой из физических памятей
-  * @param  mem_ptr указатель на програмную модель памяти БДД
+  * @param  mem_ptr указатель на програмную модель памяти
   * @param  frame указатель на кадр размером 64 байта для записи
   */
 void fr_mem_param_save(typeFRAME_MEM* mem_ptr, uint8_t* frame)
@@ -268,7 +268,7 @@ void fr_mem_param_save(typeFRAME_MEM* mem_ptr, uint8_t* frame)
 
 /**
   * @brief  чтение парметров из начала каждой из физических памятей с последующей проверкой по CRC
-  * @param  mem_ptr указатель на програмную модель памяти БДД
+  * @param  mem_ptr указатель на програмную модель памят
   * @param  frame указатель на кадр размером 64 байта для полученных параметров
   * @retval  >= 0 - номер памяти из которой произошла загрузка параметров; <0 - загрузка параметров не удалась
   */

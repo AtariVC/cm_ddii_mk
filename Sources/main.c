@@ -16,6 +16,7 @@
 #include "gpio.h"
 #include "timers.h"
 #include "ddii.h"
+#include "termo_res.h"
 
 // создание объектов отдельных программных моделей
 typeTPStruct tp;	//! обязательный объект планировщика задач
@@ -49,7 +50,7 @@ int main() {
 	//
 	cm_init(&cm, CM, CM_SELF_MB_ID, FRAME_DEV_ID, CM+1);  // инициализация объекта програмной модели ЦМ (включает в себя все переферийные модели ЦМ: ВШ, МКО, GPIO, ADC и т.п.)
 	//cm_load_cfg(&cm);	// загрузка конфигурации из энергонезависимой памяти
-	pwr_all_on_off(&cm.pwr, 1);  // включение переферии согласно настройкам каналов управления питанием
+	// pwr_all_on_off(&cm.pwr, 1);  // включение переферии согласно настройкам каналов управления питанием
 	// ddii_power_detector_on(&ddii_gpio_ptr);
 	__main_init_perepherial_modules();  // инициализация объектов переферии, подключаемых к ЦМ
 	//
@@ -182,7 +183,7 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 					case (CMD_INIT):
 						// __main_base_init();
 						break;
-					case (7):
+					case (CMD_REC_FRAME):
 						ddii_send_mko_frame(&ddii);
 						// формирование команды
 						// ctrl_data[1] = 0x0FF1;
@@ -246,6 +247,28 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 							pid_refresh(&cm_ptr->hvip[cm_ptr->mko_rt.data[1]].pid);
 						}
 						break;
+					case (CM_MKO_SET_HH):
+						memcpy(&ddii.cfg.mpp_HH, &cm_ptr->mko_rt.data[1], 2 * 8);
+						ddii_mpp_set_level_hh(&ddii);
+						ddii_download_cfg_inmem(&ddii);
+						break;
+					case (CM_SET_LEVEL_TRIG):
+						memcpy(&ddii.cfg.mpp_level_trig, &cm_ptr->mko_rt.data[1], 2 * 1);
+						ddii_mpp_set_level_hh(&ddii);
+						ddii_download_cfg_inmem(&ddii);
+					case (CM_GET_CONFIG_DATA_MPP):
+						ddii_get_mko_mpp_config_data(&ddii);
+					case (CM_GET_HVIP): /// TODO: объеденить результаты hvip и term
+						ddii_get_mko_hvip(&ddii, cm_ptr->mko_rt.data[1]);
+					case (CM_GET_TEMP):
+						ddii_get_mko_temp(&ddii);
+					case (CM_SET_DEFAULT_CFG):
+						ddii_set_default_cfg(&ddii);
+					case (CM_CSA_TEST):
+						ddii.csa_test.enable_test = cm_ptr->mko_rt.data[1];
+						/// TODO: выдать результат проверки
+					case (CM_READ_MEM):
+						ddii_mko_read_mem(&ddii);
 				}
 				break;
 			// case CM_MKO_SA_ARCH_REQUEST_CM:
@@ -270,7 +293,6 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 	// if (mko_need_to_process(&cm_ptr->mko_bc)){
 	// 	switch(cm_ptr->mko_bc.cw.field.sub_addr){
 	// 		case():
-				
 	// 	}
 	// }
 }
@@ -283,7 +305,8 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 {
 	typeFrameStruct frame;
-	uint16_t tmp_buf[sizeof(typeDDIIRec)];
+	uint16_t tmp_buf[200] = {0xFEFE};
+	uint8_t i;
 	//
 	if (cm_ptr->ib.command_frame_flag){
 		cm_ptr->ib.command_frame_flag = 0;
@@ -314,6 +337,9 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 						}
 						break;
 					case CMD_HVIP_ON_OFF:
+						mpp->ib->global_dbg_flag = 0x01;
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
+						mpp->ib->global_dbg_flag = 0x00;
 						if (cm_ptr->ib.command_frame.data[1] == PIPS_CH_VOLTAGE){
 							ddii.cm->hvip[1].mode = cm_ptr->ib.command_frame.data[3];
 						}
@@ -325,51 +351,70 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 						}
 						break;
 					case CMD_DBG_UPDATE_DATA:
-						mpp->ib->global_dbg_flag = 0x00;
-						ddii_mpp_get_data(&ddii);
 						mpp->ib->global_dbg_flag = 0x01;
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
+						Timer_Delay(5);
+						ddii_mpp_get_data(&ddii);
+						mpp->ib->global_dbg_flag = 0x00;
 						break;
 					case CM_DBG_CMD_CSA_TEST_ENABLE:
-						if (cm_ptr->ib.command_frame.data[1] == 1){
-							ddii.csa_test.enable_test = 1;
-						}
-						else{
-							ddii.csa_test.enable_test = 0;
-						}
+						ddii.csa_test.enable_test = cm_ptr->ib.command_frame.data[1];
 						break;
 					case CM_DBG_UPDATE_CFG:
-						mpp->ib->global_dbg_flag = 0x00;
+						mpp->ib->global_dbg_flag= 0x01;
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
+						Timer_Delay(5);
 						ddii_update_cfg(&ddii, cm_ptr->ib.command_frame.data);
-						mpp->ib->global_dbg_flag = 0x01;
+						mpp->ib->global_dbg_flag = 0x00;
 						break;
 					case CM_DBG_CMD_CM_RESET:
 						// todo: need to add cm_software or pwr reset
 						break;
-					case CM_DBG_CMD_CM_CHECK_MEM:
-						fr_mem_check(&cm_ptr->mem);
-						break;
-					case CM_DBG_CMD_CM_INIT:
-						if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0xAA55) __main_base_init();
-						break;
-					case CM_DBG_CMD_ARCH_REQUEST:
-						if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0x0000){
-							fr_mem_read_data_frame(&cm_ptr->mem, (uint8_t*)&frame);
-							mko_rt_write_to_subaddr(&cm_ptr->mko_rt, CM_MKO_SA_ARCH_READ_CM, (uint16_t*)&frame);
-							// ib_run_transaction(&cm_ptr->ib, 0xFF, 106, 0, 2, (uint16_t*)&frame);
-						}
-						break;
+					// case CM_DBG_CMD_CM_CHECK_MEM:
+					// 	fr_mem_check(&cm_ptr->mem);
+					// 	break;
+					// case CM_DBG_CMD_CM_INIT:
+					// 	if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0xAA55) __main_base_init();
+					// 	break;
+					// case CM_DBG_CMD_ARCH_REQUEST:
+					// 	if (__REV16(cm_ptr->ib.command_frame.data[0]) == 0x0000){
+					// 		fr_mem_read_data_frame(&cm_ptr->mem, (uint8_t*)&frame);
+					// 		mko_rt_write_to_subaddr(&cm_ptr->mko_rt, CM_MKO_SA_ARCH_READ_CM, (uint16_t*)&frame);
+					// 		// ib_run_transaction(&cm_ptr->ib, 0xFF, 106, 0, 2, (uint16_t*)&frame);
+					// 	}
+					// 	break;
 					case CM_DBG_SET_VOLTAGE:
 					// TODO: Проверить
+						mpp->ib->global_dbg_flag = 0x01;
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
 						ddii_cmd_set_voltage_pwm(&ddii, cm_ptr->ib.command_frame.data);
+						mpp->ib->global_dbg_flag = 0x00;
+						break;
+					case CM_DBG_SET_HVIP_AB:
+					// TODO: Проверить
+						mpp->ib->global_dbg_flag = 0x01;
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
+						ddii_hvip_set_coef_a_b(&ddii, cm_ptr->ib.command_frame.data);
+						mpp->ib->global_dbg_flag = 0x00;
 						break;
 					case SET_DEFAULT_CFG:
-						fr_mem_format(&ddii.mem);
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
+						// fr_mem_format(&ddii.mem);
 						ddii_set_default_cfg(&ddii);
 						break;
+					case SET_VOLTAGE_CORRECTION_MODE:
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_16, cm_ptr->ib.command_frame.reg_addr,cm_ptr->ib.command_frame.reg_cnt, NULL);
+						ddii.voltage_correction_mode = cm_ptr->ib.command_frame.data[0];
 				}
 			}
 			if (cm_ptr->ib.command_frame.f_code == MB_F_CODE_3){
 				switch(cm_ptr->ib.command_frame.reg_addr){
+					case CMD_DBG_GET_CFG:
+						mpp->ib->global_dbg_flag = 0x01;
+						memcpy(tmp_buf, (uint16_t*)&ddii.cfg, sizeof(ddii.cfg));
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
+						mpp->ib->global_dbg_flag = 0x00;
+						break;
 					case CMD_DBG_GET_TELEMETRIA:
 						mpp->ib->global_dbg_flag = 0x01;
 						ddii_struct_telemetria_forming(&ddii);
@@ -393,9 +438,29 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 					case CM_DBG_GET_VOLTAGE:
 						mpp->ib->global_dbg_flag = 0x01;
 						ddii_update_voltage(&ddii);
-						memcpy(tmp_buf, (uint16_t*)&ddii.telmtr_struct.hvip_data, sizeof(typeDDII_HVIP_Data)*3);
+						memcpy(tmp_buf, (uint16_t*)&ddii.telmtr_struct.hvip_data, sizeof(typeDDII_HVIP_Data)*HVIP_NUM);
 						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
 						mpp->ib->global_dbg_flag = 0x00;
+						break;
+					case CM_DBG_GET_HVIP_AB:
+					// TODO: Проверить
+						mpp->ib->global_dbg_flag = 0x01;
+						ddii_hvip_get_coef_a_b(&ddii, cm_ptr->ib.command_frame.data);
+						memcpy(tmp_buf, (uint16_t*)&ddii.hvip_AB, sizeof(typeDDIIhvip_AB)*HVIP_NUM);
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
+						mpp->ib->global_dbg_flag = 0x00;
+						break;
+					case CM_DBG_GET_DESIRED_HVIP:
+						mpp->ib->global_dbg_flag = 0x01;
+						for(i = 0; i < HVIP_NUM; i++){
+							ddii.desired_hv[i] = cm_ptr->hvip[i].v_hv_desired;
+						}
+						memcpy(tmp_buf, (uint16_t*)&ddii.desired_hv, sizeof(ddii.desired_hv)*HVIP_NUM);
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
+						break;
+					case CM_GET_TERM:
+						memcpy(tmp_buf, (uint16_t*)&ddii.term_struct, sizeof(ddii.term_struct));
+						ib_run_transaction(&cm_ptr->ib, CM_SELF_MB_ID, MB_F_CODE_3, 0, cm_ptr->ib.command_frame.byte_cnt/2, tmp_buf);
 						break;
 				}
 			}
