@@ -63,9 +63,11 @@ void __cm_init_hvip(typeCMModel* cm_ptr)
 	float b_u[HVIP_NUM] = HVIP_B_U;
 	float a_i[HVIP_NUM] = HVIP_A_I;
 	float b_i[HVIP_NUM] = HVIP_B_I;
+	float max_pwm[HVIP_NUM] = HVIP_PWM_VAL_MAX;
+	uint8_t type_regulation[HVIP_NUM] = TYPE_REGULATION;
 	for(i=0;i<HVIP_NUM;i++){
 		hvip_init(&cm_ptr->hvip[i], mode[i], &cm_ptr->adc, adc_ch_u[i], adc_ch_i[i], NULL, NULL, i+1, pwm_default[i],
-					des_voltage[i], max_current[i], a_u[i], b_u[i], a_i[i], b_i[i]);
+					des_voltage[i], max_current[i], a_u[i], b_u[i], a_i[i], b_i[i], max_pwm[i], type_regulation[i]);
 	}
 }
 

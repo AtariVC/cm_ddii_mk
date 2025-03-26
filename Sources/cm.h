@@ -18,10 +18,10 @@
 
 //***Параметры программы для ЦМ
 //версия прошивки
-#define CM_SW_VERSION 0
+#define CM_SW_VERSION 1.0
 // номер устройства
 #define FRAME_DEV_ID 4 //4 - ДДИИ
-#define FABRICATION_NUMBER 1 //1 - прототип
+#define FABRICATION_NUMBER 2 //1 - прототип, 2 - ЛО1
 // параметры МКО
 #define MKO_ADDRESS_DEFAULT  	15// 0 - адрес берется с разъема, не 0 - адрес МКО
 //
@@ -154,13 +154,15 @@ enum hvip_channels_list
 #define HVIP_MODE_DEFAULT {HVIP_MODE_ON, HVIP_MODE_ON, HVIP_MODE_ON}
 #define HVIP_ADC_CH_NUM_VOLTAGE {2, 6, 4}
 #define HVIP_ADC_CH_NUM_CURRENT {1, 3, 5}
-#define HVIP_PWM_VAL_DEFAULT {0, 0, 0} // {20.43, 17.4, 17.806}
-#define HVIP_DESIRED_VOLTAGE {24.0, 24.0, 24.0} // {28.0, 40.0, 34.0} (ch, pips, sipm)
+#define HVIP_PWM_VAL_DEFAULT {20.3, 22.5, 21.65} // {20.43, 17.4, 17.806} tests - {20.5, 22.5, 21.65},  ЛО1 { , , }
+#define HVIP_DESIRED_VOLTAGE {30, 39, 34.5} // {25.75, 40.0, 31.0} (ch, pips, sipm) 
 #define HVIP_MAXIMUM_CURRENT {100.0, 100.0, 100.0}
-#define HVIP_A_U {40, 40, 40}
+#define HVIP_A_U {41, 41, 41}
 #define HVIP_B_U {0, 0, 0}
 #define HVIP_A_I {100, 100, 100}
 #define HVIP_B_I {0.0, 0.0, 0.0}
+#define HVIP_PWM_VAL_MAX {20.7, 22.7, 21.7}
+#define TYPE_REGULATION {PID_TYPE, LINER_TYPE, PID_TYPE} // 0 - pid регуляция, 1 - линейная
 
 //структуры кадров
 #pragma pack(push, 2)

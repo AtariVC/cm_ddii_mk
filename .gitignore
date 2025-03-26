@@ -46,6 +46,7 @@ doxygen/latex/
 *.su
 *.idb
 *.pdb
+*.json
 
 # Kernel Module Compile Results
 *.mod*

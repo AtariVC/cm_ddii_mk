@@ -25,7 +25,7 @@
 #define HVIP_PID_MAX_REACTION 1.0
 
 //! Параметры отслеживания состояни регуляции
-#define HVIP_MAX_VOLTAGE_COEFF (1.3)
+#define HVIP_MAX_VOLTAGE_COEFF (1.1)
 #define HVIP_VOLTAGE_MAX_ERROR (0.1)
 
 //! Состояние работы модуля
@@ -79,6 +79,9 @@ typedef struct
   type_HVIP_frame_report report; //! Отчет о работе модуля
   //! поддрежка task_planner
   uint64_t last_call_time_us;
+  float max_pwm_val; // ограничение значения pwm сверху
+  uint8_t type_regulation; // 0 - pid регуляция, 1 - линейная
+  uint8_t flag_overvolt;
 }type_HVIP;
 
 int8_t hvip_init(type_HVIP* hvip_ptr, uint8_t mode,
@@ -87,8 +90,9 @@ int8_t hvip_init(type_HVIP* hvip_ptr, uint8_t mode,
                   uint8_t pwm_ch_num,
                   float pwm_val, float desired_voltage_V, float max_current_A,
                   float A_U, float B_U,
-                  float A_I, float B_I
-                  );
+                  float A_I, float B_I,
+                  float max_pwm, uint8_t type_regulation);
+
 int8_t hvip_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct* interface);
 void hvip_process(type_HVIP* hvip_ptr, uint16_t period_ms);
 void hvip_set_mode(type_HVIP* hvip_ptr, uint8_t mode);

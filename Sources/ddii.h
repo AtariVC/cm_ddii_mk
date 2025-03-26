@@ -247,7 +247,7 @@ typedef struct
   uint32_t *global_frame_num_ptr;
   // to task_planner
   uint8_t meas_event_num;
-  uint8_t status_load_cfg;
+  uint8_t status_load_cfg_from_mem;
   uint64_t last_call_time_us;
   // data
   typeDDIIFrameUnion frame;

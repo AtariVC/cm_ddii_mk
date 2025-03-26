@@ -54,7 +54,7 @@ void ddii_init(typeDDIIStruct* ddii_ptr,
 	ddii_ptr->cm->ib.global_dbg_flag = 0;
 	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_S;
 	ddii_ptr->mode = COMBAT_MODE;
-	ddii_ptr->status_load_cfg = DEFAULT_CFG;
+	ddii_ptr->status_load_cfg_from_mem = DEFAULT_CFG;
 	ddii_ptr->voltage_correction_mode = 0;
 	for (i = 0; i<TERM_NUM; i++){
 		tres_init(&ddii_ptr->term_model[i], &cm->adc, adc_chan[i]);	
@@ -340,9 +340,9 @@ void ddii_set_cfg(typeDDIIStruct* ddii_ptr){
 	ddii_ptr->interval_ms = ddii_ptr->cfg.interval_measure;
 	memcpy(tmp_buf, (uint8_t*)&ddii_ptr->cfg.hvip_voltage, sizeof(ddii_ptr->cfg.hvip_voltage));
 	memcpy(&tmp_buf[HVIP_NUM*4], (uint8_t*)&ddii_ptr->cfg.hvip_pwm_val, sizeof(ddii_ptr->cfg.hvip_voltage));
-	ddii_cmd_set_voltage_pwm(ddii_ptr, tmp_buf);
+	// ddii_cmd_set_voltage_pwm(ddii_ptr, tmp_buf);
 	ddii_ptr->voltage_correction_mode = ddii_ptr->voltage_correction_mode;
-	ddii_ptr->status_load_cfg = LOADED_CFG;
+	ddii_ptr->status_load_cfg_from_mem = LOADED_CFG;
 }
 
 /**
@@ -410,7 +410,7 @@ void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
 	ddii_ptr->cfg.interval_measure = DDII_DEFAULT_INTERVAL_S;
 	ddii_ptr->cfg.volt_corr_mode = 0;
 	// ddii_download_cfg_inmem(ddii_ptr);
-	ddii_ptr->status_load_cfg = DEFAULT_CFG;
+	ddii_ptr->status_load_cfg_from_mem = DEFAULT_CFG;
 }
 
 /////////////// Функции для взаимодействия с mpp /////////////////

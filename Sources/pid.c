@@ -122,6 +122,39 @@ float pid_step_calc(type_PID_model* pid_ptr, float value, uint16_t period_ms)
 }
 
 /**
+  * @brief  подсчет шага для линейной регуляции
+  * @param  current_value текущее значение управляемой переменной
+  * @param  target_value целевое значение управляемой переменной
+  * @param  inc_accur точность регулировки
+  * @param  target_err допустимое отклонение от целевого значения
+  * @param  gap если разница между текущем значение больше gap то можно inc сделать больше
+  * @retval необходимая реакция для поддержания значения
+  */
+float linear_increment(float current_value, float target_value, float inc_accur, float target_err, float gap){
+  float overgap_mult = 100;
+
+  if (fabs(current_value - target_value) >= target_err){
+    if (current_value > target_value){
+      if (fabs(current_value - target_value) > gap){
+        return -inc_accur * overgap_mult;
+      }
+      else{
+        return -inc_accur;
+      }
+    }
+    else{
+      if (fabs(current_value - target_value) > gap){
+        return inc_accur * overgap_mult;
+      }
+      else{
+        return inc_accur;
+      }
+    }
+  }
+}
+
+
+/**
   * @brief  вывод отладочной информации для ПИД
   * @param  pid_ptr указатель на програмную модель устройства
   * @param  report указатель на массив для отчета

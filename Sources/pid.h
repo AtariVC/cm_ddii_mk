@@ -6,6 +6,11 @@
 #include "digital_filter.h"
 #include "debug.h"
 
+
+#define LINER_TYPE 1
+#define PID_TYPE 0
+
+
 #pragma pack(2)
 /** 
   * @brief  структура управления ПИД-моделью
@@ -31,5 +36,6 @@ void pid_set_desired_value(type_PID_model* pid_ptr, float desired_value);
 void pid_set_coeff(type_PID_model* pid_ptr, float K, float P, float I, float D);
 float pid_step_calc(type_PID_model* pid_ptr, float value, uint16_t period_ms);
 uint8_t pid_get_str_report(type_PID_model* pid_ptr, char* report);
+float linear_increment(float current_value, float target_value, float inc_accur, float target_err, float gap);
 
 #endif

@@ -35,7 +35,8 @@ int8_t hvip_init(type_HVIP* hvip_ptr, uint8_t mode,
                   uint8_t pwm_ch_num,
                   float pwm_val, float desired_voltage_V, float max_current_A,
                   float A_U, float B_U,
-                  float A_I, float B_I
+                  float A_I, float B_I,
+                  float max_pwm, uint8_t type_regulation
                   )
 {
   //
@@ -50,6 +51,7 @@ int8_t hvip_init(type_HVIP* hvip_ptr, uint8_t mode,
   hvip_ptr->current = 0;
   hvip_ptr->max_current = max_current_A;
   hvip_ptr->v_fb = 0;
+  hvip_ptr->flag_overvolt = 0;
   //
   hvip_ptr->a_u = A_U;
   hvip_ptr->b_u = B_U;
@@ -67,6 +69,9 @@ int8_t hvip_init(type_HVIP* hvip_ptr, uint8_t mode,
   hvip_set_voltage(hvip_ptr, hvip_ptr->v_hv_desired);
   //
   hvip_ptr->last_call_time_us = 0;
+
+  hvip_ptr->max_pwm_val = max_pwm;
+  hvip_ptr->type_regulation = type_regulation;
   return 1;
 }
 
@@ -109,12 +114,30 @@ void hvip_process(type_HVIP* hvip_ptr, uint16_t period_ms)
   //
   pid_set_desired_value(&hvip_ptr->pid, hvip_ptr->v_hv_desired);
   if (hvip_ptr->mode == HVIP_MODE_ON){
-    if (hvip_ptr->v_hv >= (hvip_ptr->v_hv_desired*HVIP_MAX_VOLTAGE_COEFF)){
-      hvip_ptr->pwm_val_float = 0;
+    if (hvip_ptr->v_hv <= (hvip_ptr->v_hv_desired*HVIP_MAX_VOLTAGE_COEFF)){ // проверка на перенапряжение
+      if (hvip_ptr->flag_overvolt == 0){
+        hvip_ptr->flag_overvolt = 1;
+        hvip_ptr->pwm_val_float = hvip_ptr->max_pwm_val;
+      }
+      else{
+        hvip_ptr->pwm_val_float = 0;
+        hvip_ptr->flag_overvolt = 0;
+      }
+    }
+    if (hvip_ptr->pwm_val_float < 0){ // из-за ошибки преобразования иногда pwm может быть меньше 0, и gpio застывает в 1
+      hvip_ptr->pwm_val_float = hvip_ptr->max_pwm_val;
     }
     else{
-      pwm_step = pid_step_calc(&hvip_ptr->pid, hvip_ptr->v_hv, period_ms);
+      if (hvip_ptr->type_regulation == 0){
+        pwm_step = pid_step_calc(&hvip_ptr->pid, hvip_ptr->v_hv, period_ms);
+      }
+      else{
+        pwm_step = linear_increment(hvip_ptr->v_hv, hvip_ptr->v_hv_desired, 0.0005, 0.05, 1);
+      }
       hvip_ptr->pwm_val_float += pwm_step;  // верная строчка, реакцию добавляем к значению PWM 
+      if (hvip_ptr->pwm_val_float >= hvip_ptr->max_pwm_val){
+        hvip_ptr->pwm_val_float = hvip_ptr->max_pwm_val;
+      }
     }
   }
   else{
