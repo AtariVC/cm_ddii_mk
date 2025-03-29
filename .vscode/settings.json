@@ -33,7 +33,9 @@
     "hvip.h": "c",
     "stm.h": "c",
     "frame_mem.h": "c",
-    "csa_test.h": "c"
+    "csa_test.h": "c",
+    "cstddef": "c",
+    "limits": "c"
   },
   "C_Cpp.errorSquiggles": "Enabled",
   "editor.accessibilityPageSize": 12,

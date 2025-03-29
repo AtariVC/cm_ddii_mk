@@ -570,7 +570,7 @@
         <TargetCommonOption>
           <Device>MDR32F8</Device>
           <Vendor>Milandr</Vendor>
-          <PackID>Keil.MDR1986VE8T.0.4.1</PackID>
+          <PackID>Keil.MDR32F8.0.1</PackID>
           <PackURL>http://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000,0x6000) IROM(0x20006000,0x2000) CPUTYPE("Cortex-M4") CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -1124,7 +1124,7 @@
         <TargetCommonOption>
           <Device>MDR32F8</Device>
           <Vendor>Milandr</Vendor>
-          <PackID>Keil.MDR1986VE8T.0.4.1</PackID>
+          <PackID>Keil.MDR32F8.0.1</PackID>
           <PackURL>http://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000,0x6000) IROM(0x20006000,0x2000) CPUTYPE("Cortex-M4") CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>

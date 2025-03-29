@@ -87,7 +87,7 @@ void __main_init_perepherial_modules(void)
 	/**
 	 * @brief  цикл используется для последовательной нумерации схожих устройств. Использование необязяательно
 	 */
-	for (uint8_var = 0; uint8_var<MPP_DEV_NUM; uint8_var++){
+	for (uint8_var = 1; uint8_var<MPP_DEV_NUM; uint8_var++){
 		mpp_init(&mpp[uint8_var],
 				MPP1 + uint8_var,
 				mpp_ib_id[uint8_var],
@@ -169,6 +169,10 @@ void __main_base_init(void)
 void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 {
 	typeFrameStruct frame;
+	uint16_t crc16;
+	uint16_t tmp_var, i;
+	uint16_t* tmp_buf[32];
+	uint16_t tlmr_buf[32];
  	//
 	if (mko_need_to_process(&cm_ptr->mko_rt)){
 		switch(cm_ptr->mko_rt.cw.field.sub_addr){
@@ -205,8 +209,11 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 						// 						(uint16_t*)&ctrl_data,
 						// 						32);
 						break;
-					case (CMD_SET_INTERVAL):
+					case (CMD_SET_INTERVAL_MEASURE_S):
 						cm_set_interval_value(cm_ptr, cm_ptr->mko_rt.data[1], cm_ptr->mko_rt.data[2]);
+						tmp_var = get_val_from_bound(cm_ptr->mko_rt.data[1], 10, 7200);
+						ddii.interval_measure_s = tmp_var;
+						ddii_meas_cycl_init(&ddii);
 						break;
 					case (CMD_SET_MPP_OFFSET):
 						if ((cm_ptr->mko_rt.data[1] >= 1) && (cm_ptr->mko_rt.data[1] <= MPP_DEV_NUM)) {
@@ -248,27 +255,56 @@ void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
 						}
 						break;
 					case (CM_MKO_SET_HH):
-						memcpy(&ddii.cfg.mpp_HH, &cm_ptr->mko_rt.data[1], 2 * 8);
+						memcpy(&ddii.cfg.mpp_HH, (uint16_t*)&cm_ptr->mko_rt.data[1], 2 * 8);
 						ddii_mpp_set_level_hh(&ddii);
-						ddii_download_cfg_inmem(&ddii);
+						// ddii_download_cfg_inmem(&ddii);
 						break;
 					case (CM_SET_LEVEL_TRIG):
-						memcpy(&ddii.cfg.mpp_level_trig, &cm_ptr->mko_rt.data[1], 2 * 1);
-						ddii_mpp_set_level_hh(&ddii);
-						ddii_download_cfg_inmem(&ddii);
-					case (CM_GET_CONFIG_DATA_MPP):
-						ddii_get_mko_mpp_config_data(&ddii);
-					case (CM_GET_HVIP): /// TODO: объеденить результаты hvip и term
-						ddii_get_mko_hvip(&ddii, cm_ptr->mko_rt.data[1]);
-					case (CM_GET_TEMP):
-						ddii_get_mko_temp(&ddii);
-					case (CM_SET_DEFAULT_CFG):
-						ddii_set_default_cfg(&ddii);
-					case (CM_CSA_TEST):
-						ddii.csa_test.enable_test = cm_ptr->mko_rt.data[1];
-						/// TODO: выдать результат проверки
-					case (CM_READ_MEM):
-						ddii_mko_read_mem(&ddii);
+						memcpy(&ddii.cfg.mpp_level_trig, (uint16_t*)&cm_ptr->mko_rt.data[1], 2 * 1);
+						ddii_mpp_set_level_triger(&ddii);
+						// ddii_download_cfg_inmem(&ddii);
+						break;
+					case (SET_V_HVIP):
+						memcpy(tmp_buf, (uint16_t*)&cm_ptr->mko_rt.data[1], 4 * 3);
+						ddii_cmd_set_voltage(&ddii, (uint8_t*)&tmp_buf);
+						break;
+					case (SET_PWM_HVIP):
+						memcpy(tmp_buf, (uint16_t*)&cm_ptr->mko_rt.data[1], 3 * 4);
+						ddii_cmd_set_pwm(&ddii, (uint8_t*)&tmp_buf);
+						break;
+					case (SET_MAX_PWM_HVIP):
+						memcpy(tmp_buf, (uint16_t*)&cm_ptr->mko_rt.data[1], 3 * 4);
+						ddii_cmd_set_max_pwm(&ddii, (uint8_t*)&tmp_buf);
+						break;
+					case (SET_TELEMETRIA):
+						ddii_struct_telemetria_forming(&ddii);
+						memcpy(tlmr_buf, (uint16_t*)&ddii.telmtr_struct, 58);
+						tlmr_buf[0] = 0x0FF1;
+						tlmr_buf[1] = 0x000E;
+						tlmr_buf[29] = 0xFFFF;
+						tlmr_buf[30] = 0xFFFF;
+						crc16 = frame_crc16((uint8_t*)&tlmr_buf, 62);
+						mko_rt_write_to_subaddr(ddii.mko_bc_ptr, 29, (uint16_t*)&tlmr_buf);
+						// mko_bc_transaction_start(ddii.mko_bc_ptr, 
+						// 	MKO_MODE_WRITE, 
+						// 	ddii.mko_addr, 
+						// 	30, 
+						// 	ddii.mko_bus, 
+						// 	(uint16_t*)&tlmr_buf, 32);
+						
+					// case (CM_GET_CONFIG_DATA_MPP):
+					// 	ddii_get_mko_mpp_config_data(&ddii);
+					// case (CM_GET_HVIP): /// TODO: объеденить результаты hvip и term
+					// 	ddii_get_mko_hvip(&ddii, cm_ptr->mko_rt.data[1]);
+					// case (CM_GET_TEMP):
+					// 	ddii_get_mko_temp(&ddii);
+					// case (CM_SET_DEFAULT_CFG):
+					// 	ddii_set_default_cfg(&ddii);
+					// case (CM_CSA_TEST):
+					// 	ddii.csa_test.enable_test = cm_ptr->mko_rt.data[1];
+					// 	/// TODO: выдать результат проверки
+					// case (CM_READ_MEM):
+					// 	ddii_mko_read_mem(&ddii);
 				}
 				break;
 			// case CM_MKO_SA_ARCH_REQUEST_CM:

@@ -18,7 +18,8 @@
 #include "termo_res.h"
 
 // дефайны для переменных
-#define DDII_DEFAULT_INTERVAL_S (10)
+#define DDII_DEFAULT_INTERVAL_MS (1*1000)
+#define DDII_DEFAULT_INTERVAL_MESURE_S (720)
 
 #define DDII_EVENT_MEAS_INTERVAL_START       (1<<0)
 #define DDII_EVENT_MEAS_INTERVAL_DATA_READY  (1<<1)
@@ -47,9 +48,6 @@
 #define REG_MPP_STRUCT_DATA           0x0006
 #define REG_MPP_LEVEL                 0x0079
 
-
-
-
 #define DDII_EVENT_MEAS_INTERVAL_START       (1<<0)
 #define DDII_EVENT_MEAS_INTERVAL_DATA_READY  (1<<1)
 
@@ -63,8 +61,6 @@
 #define DDII_MK_COMMAND_SET_MODE      1
 #define DDII_MK_COMMAND_START         2
 #define DDII_MK_COMMAND_CONSTANT_MODE 17
-
-#define HEAD                          0x0FF1
 
 #define REG_MPP_COMAND                0x0000
 #define REG_MPP_LEVEL_TRIG            0x0001
@@ -104,6 +100,8 @@
 
 #define TERM_NUM 2
 #define TERM_ADC_CHANNELS {12, 11}
+
+#define TECH_SUB_ADR                  29
 //
 #pragma pack(push, 2)
 
@@ -150,8 +148,8 @@ typedef struct {
 	float    hvip_pwm_val[HVIP_NUM];      // + 32
 	float    hvip_voltage[HVIP_NUM];      // + 44
   uint16_t mpp_id;               // + 46
-  uint32_t interval_measure;     // + 50
-  uint16_t volt_corr_mode;       // + 52
+  uint16_t interval_measure_s;     // + 50
+  // uint16_t volt_corr_mode;       // + 52
 }typeDDII_cfg;
 
 typedef union{
@@ -201,7 +199,7 @@ typedef struct{
   uint16_t                Level;                  // + 18
   typeDDII_HVIP_Data      hvip_data[HVIP_NUM];    // + 20
   uint8_t                 csa_test_on;            // + 59
-  uint16_t                ddii_interval_request;  // + 60
+  uint16_t                ddii_interval_request;  // + 60  нужен uint32_t
   uint16_t                ACQ1_Peack;             // + 62
   uint16_t                ACQ2_Peack;             // + 64
   typeDDII_Particle_Union particle_telmtr;        // + 66
@@ -243,7 +241,7 @@ typedef struct
 	uint16_t mko_bus;			               // id на внутренней шине
 	uint16_t self_num;                   // номер устройства с точки зрения ЦМ
 	uint16_t device_number, frame_type;  //параметры прибора МПП, в котором он используется
-  uint16_t interval_ms;
+  uint32_t interval_ms;
   uint32_t *global_frame_num_ptr;
   // to task_planner
   uint8_t meas_event_num;
@@ -267,8 +265,8 @@ typedef struct
   uint16_t mode;
   uint8_t event;
   uint8_t frame_ptr;
-  uint64_t curent_time_measure;
-  uint64_t curent_time;
+  uint64_t curent_time_measure_us;
+  uint64_t curent_time_us;
   type_CSA_TEST_Struct csa_test;
   //typeDDIICounterParticle counter_particle;
   typeDDII_DB_Telemetry telmtr_struct; 
@@ -280,6 +278,7 @@ typedef struct
   typeCyclogramma term_cyclo;
   float desired_hv[HVIP_NUM];
   uint16_t write_inmem_flag;
+  uint16_t interval_measure_s;
 } typeDDIIStruct;
 
 
@@ -326,7 +325,6 @@ void ddii_mpp_set_level_hh(typeDDIIStruct* ddii_ptr);
 void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr);
 void ddii_mpp_set_level_triger(typeDDIIStruct* ddii_ptr);
 void ddii_mpp_get_data(typeDDIIStruct* ddii_ptr);
-void ddii_reset_mpp_struct_measure(typeDDIIStruct* ddii_ptr);
 void ddii_start_mpp_measure(typeDDIIStruct* ddii_ptr, uint16_t enable);
 void ddii_reset_mpp_struct_measure(typeDDIIStruct* ddii_ptr);
 void ddii_send_mko_frame(typeDDIIStruct* ddii_ptr);
@@ -351,6 +349,10 @@ void ddii_read_frame_inmem(typeDDIIStruct* ddii_ptr);
 void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr);
 void ddii_mko_write_mem(typeDDIIStruct* ddii_ptr);
 void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us);
+void ddii_cmd_set_voltage(typeDDIIStruct* ddii_ptr, uint8_t *data);
+void ddii_cmd_set_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data);
+void ddii_cmd_set_max_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data);
+uint32_t reverse_32bit_data_formko(uint32_t val);
 
 // void ddii_power_detector_on(type_SINGLE_GPIO* ddii_gpio_ptr);
 #endif

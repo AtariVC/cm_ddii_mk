@@ -26,7 +26,8 @@
         {
             "name": "Target (IntRAM)",
             "includePath": [
-                "/Users/vladk/Yandex.Disk.localized/Develop_ddii/cm_ddii_mk"
+                "c:\\Users\\User\\YandexDisk\\Develop_ddii\\ddii_soft\\cm_ddii_mk\\Sources",
+                "c:\\Users\\User\\YandexDisk\\Develop_ddii\\ddii_soft\\cm_ddii_mk\\Sources\\1986ve8_lib"
             ],
             "defines": [
                 "_INT_RAM_",
@@ -108,8 +109,8 @@
         {
             "name": "Target (ExtMEM Dbg)",
             "includePath": [
-                "/Users/vladk/Yandex.Disk.localized/Develop_ddii/cm_ddii_mk/.\\Sources",
-                "/Users/vladk/Yandex.Disk.localized/Develop_ddii/cm_ddii_mk"
+                "c:\\Users\\User\\YandexDisk\\Develop_ddii\\ddii_soft\\cm_ddii_mk\\Sources",
+                "c:\\Users\\User\\YandexDisk\\Develop_ddii\\ddii_soft\\cm_ddii_mk\\Sources\\1986ve8_lib"
             ],
             "defines": [
                 "__CC_ARM",
@@ -190,9 +191,8 @@
         {
             "name": "Target (ExtMEM Rls)",
             "includePath": [
-                "/Users/vladk/Yandex.Disk.localized/Develop_ddii/cm_ddii_mk/.\\Sources\\1986ve8_lib",
-                "/Users/vladk/Yandex.Disk.localized/Develop_ddii/cm_ddii_mk/.\\Sources",
-                "/Users/vladk/Yandex.Disk.localized/Develop_ddii/cm_ddii_mk"
+                "c:\\Users\\User\\YandexDisk\\Develop_ddii\\ddii_soft\\cm_ddii_mk\\Sources\\1986ve8_lib",
+                "c:\\Users\\User\\YandexDisk\\Develop_ddii\\ddii_soft\\cm_ddii_mk\\Sources"
             ],
             "defines": [
                 "_EXT_MEM_RLS_",

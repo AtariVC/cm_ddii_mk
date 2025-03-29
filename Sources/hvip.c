@@ -114,7 +114,7 @@ void hvip_process(type_HVIP* hvip_ptr, uint16_t period_ms)
   //
   pid_set_desired_value(&hvip_ptr->pid, hvip_ptr->v_hv_desired);
   if (hvip_ptr->mode == HVIP_MODE_ON){
-    if (hvip_ptr->v_hv <= (hvip_ptr->v_hv_desired*HVIP_MAX_VOLTAGE_COEFF)){ // проверка на перенапряжение
+    if (hvip_ptr->v_hv >= (hvip_ptr->v_hv_desired*HVIP_MAX_VOLTAGE_COEFF)){ // проверка на перенапряжение
       if (hvip_ptr->flag_overvolt == 0){
         hvip_ptr->flag_overvolt = 1;
         hvip_ptr->pwm_val_float = hvip_ptr->max_pwm_val;
@@ -125,7 +125,7 @@ void hvip_process(type_HVIP* hvip_ptr, uint16_t period_ms)
       }
     }
     if (hvip_ptr->pwm_val_float < 0){ // из-за ошибки преобразования иногда pwm может быть меньше 0, и gpio застывает в 1
-      hvip_ptr->pwm_val_float = hvip_ptr->max_pwm_val;
+      hvip_ptr->pwm_val_float = 0;
     }
     else{
       if (hvip_ptr->type_regulation == 0){

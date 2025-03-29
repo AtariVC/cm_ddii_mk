@@ -13,7 +13,7 @@
 #include "ddii.h"
 #include "cm.h"
 #include "frame_mem.h"
-#include <cstdint>
+// #include <cstdint.h>
 #include <stdint.h>
 
 
@@ -52,7 +52,7 @@ void ddii_init(typeDDIIStruct* ddii_ptr,
 	ddii_ptr->mpp = mpp_ptr;
 	ddii_ptr->cm = cm;
 	ddii_ptr->cm->ib.global_dbg_flag = 0;
-	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_S;
+	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_MS;
 	ddii_ptr->mode = COMBAT_MODE;
 	ddii_ptr->status_load_cfg_from_mem = DEFAULT_CFG;
 	ddii_ptr->voltage_correction_mode = 0;
@@ -64,12 +64,122 @@ void ddii_init(typeDDIIStruct* ddii_ptr,
 	// fr_mem_set_rd_ptr(&ddii_ptr->mem, 0);
 	// fr_mem_set_wr_ptr(&ddii_ptr->mem, 0);
 	ddii_reset_parameters(ddii_ptr);
+	// ddii_set_default_cfg(ddii_ptr);
 	
 	ddii_download_cfg(ddii_ptr);
 	// включение ДДИИ (реализовано в main)
 	// ...
 	// работы с циклограммами
 	ddii_meas_cycl_init(ddii_ptr);
+}
+
+
+///////////////Функции взаимодействия с конфигурацией/////////////////
+/**
+	* @brief  Загрузка конфигурации ддии из памяти
+	* @param  ddii_ptr указатель на структуру управления
+  */
+void ddii_download_cfg(typeDDIIStruct* ddii_ptr){
+	uint8_t ddii_cfg[64] = {0};
+	int8_t status_read_mem;
+	status_read_mem = fr_mem_param_load(&ddii_ptr->mem, ddii_cfg);
+	memcpy(&ddii_ptr->cfg, ddii_cfg, sizeof(ddii_ptr->cfg));
+	// ddii_set_default_cfg(ddii_ptr);
+	if (status_read_mem >= 0){
+		if (ddii_ptr->cfg.head == HEAD){
+			ddii_set_cfg(ddii_ptr); // Не работает чтение из ПЗУ
+			ddii_ptr->status_load_cfg_from_mem = LOADED_CFG;
+		}
+		else{
+			ddii_set_default_cfg(ddii_ptr);
+			ddii_ptr->status_load_cfg_from_mem = DEFAULT_CFG;
+			// fr_mem_format(&ddii_ptr->mem);
+		}
+	}
+	else{
+		ddii_set_default_cfg(ddii_ptr);
+	} 
+}
+
+/**
+	* @brief  Устанавка конфигурфции ДДИИ
+	* @param  ddii_ptr указатель на структуру управления
+  */
+void ddii_set_cfg(typeDDIIStruct* ddii_ptr){
+	uint8_t tmp_buf[HVIP_NUM*4*2];
+	ddii_set_cfg_mpp(ddii_ptr);
+	ddii_ptr->mpp->id = ddii_ptr->cfg.mpp_id;
+	ddii_ptr->interval_measure_s = ddii_ptr->cfg.interval_measure_s;
+	memcpy(tmp_buf, (uint8_t*)&ddii_ptr->cfg.hvip_voltage, sizeof(ddii_ptr->cfg.hvip_voltage));
+	memcpy(&tmp_buf[HVIP_NUM*4], (uint8_t*)&ddii_ptr->cfg.hvip_pwm_val, sizeof(ddii_ptr->cfg.hvip_voltage));
+	ddii_cmd_set_voltage_pwm(ddii_ptr, tmp_buf);
+	// ddii_ptr->voltage_correction_mode = ddii_ptr->voltage_correction_mode;x
+}
+
+/**
+	* @brief  Устанавка конфигурфции МПП
+	* @param  ddii_ptr указатель на структуру управления
+  */
+void ddii_set_cfg_mpp(typeDDIIStruct* ddii_ptr){
+	ddii_mpp_set_level_triger(ddii_ptr);
+	ddii_mpp_set_level_hh(ddii_ptr);
+}
+
+void ddii_download_cfg_inmem(typeDDIIStruct* ddii_ptr){
+	uint8_t cfg_buf[FRAM_FRAME_VOLUME_B] = {0};
+	memcpy(cfg_buf, (uint8_t*)&ddii_ptr->cfg, sizeof(ddii_ptr->cfg));
+	fr_mem_param_save(&ddii_ptr->mem, cfg_buf);
+}
+
+
+void ddii_update_cfg(typeDDIIStruct* ddii_ptr, uint8_t* data){
+	// reverse_data(data, cfg_data);
+	memcpy(&ddii_ptr->cfg, data, sizeof(ddii_ptr->cfg));
+	ddii_set_cfg(ddii_ptr);
+	ddii_download_cfg_inmem(ddii_ptr);
+}
+
+
+/**
+	* @brief  Устанавка дефолтной конфигурфции
+	* @param  ddii_ptr указатель на структуру управления
+	*
+  */
+void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
+	uint16_t level_hh[8] = {64, 64, 128, 256, 512, 1024, 1100, 1200};
+	uint16_t level_trig[2] = {REG_MPP_LEVEL_TRIG, 10};  // {Команда МПП, Уровень}
+	// float pwm_buf[HVIP_NUM] = HVIP_PWM_VAL_DEFAULT;            // Инициализация массива PWM
+	// float voltage_buf[HVIP_NUM] = HVIP_DESIRED_VOLTAGE;        // Инициализация массива напряжения
+	unsigned int i;                                     
+	
+	ddii_ptr->cfg.mpp_id = DDII_MPP_ID;
+	// memcpy((void*)&ddii_ptr->cfg.hvip_pwm_val, (void*)pwm_buf, sizeof(ddii_ptr->cfg.hvip_pwm_val));
+	// memcpy((void*)&ddii_ptr->cfg.hvip_voltage, (void*)voltage_buf, sizeof(ddii_ptr->cfg.hvip_pwm_val));
+	memcpy((uint16_t*)&ddii_ptr->cfg.mpp_HH, (uint16_t*)&level_hh, sizeof(level_hh));
+	memcpy((uint8_t*)&ddii_ptr->cfg.mpp_level_trig, (uint8_t*)&level_trig[1], sizeof(level_trig[1]));
+	ddii_ptr->cfg.head = HEAD;
+	for (i = 0; i < sizeof(level_hh)/2; i++){
+		level_hh[i] = __REV16(level_hh[i]);
+	}
+	for (i = 0; i < sizeof(level_trig)/2; i++){
+		level_trig[i] = __REV16(level_trig[i]);
+	}
+	// trig
+	if (ddii_ptr->mpp->ib->global_dbg_flag != 0x00)
+		ddii_ptr->mpp->ib->global_dbg_flag = 0x00;
+	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_COMAND, sizeof(level_trig)/2, level_trig);
+	// level hh
+	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_LEVEL_HH, sizeof(level_hh)/2, level_hh);
+	if (ddii_ptr->mode == DEBUG_MODE)
+		ddii_ptr->mpp->ib->global_dbg_flag = 0x01;
+	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_MS;
+	ddii_ptr->cfg.interval_measure_s = DDII_DEFAULT_INTERVAL_MESURE_S;
+	// ddii_ptr->cfg.volt_corr_mode = 0;
+	// ddii_download_cfg_inmem(ddii_ptr);
+	ddii_ptr->status_load_cfg_from_mem = DEFAULT_CFG;
+	ddii_reset_mpp_struct_measure(ddii_ptr);
+	ddii_set_cfg_mpp(ddii_ptr);
+	ddii_ptr->mpp->id = ddii_ptr->cfg.mpp_id;
 }
 
 void ddii_reset_parameters(typeDDIIStruct* ddii_ptr){
@@ -81,11 +191,11 @@ void ddii_reset_parameters(typeDDIIStruct* ddii_ptr){
 	memset((uint8_t*)ddii_ptr->rec_fifo, 0xFE, sizeof(ddii_ptr->rec_fifo));
 	ddii_ptr->rec_num = 0;
 	ddii_ptr->rec_max = 0;
-	//
-	// fr_mem_format(&ddii_ptr->mem);
+	fr_mem_format(&ddii_ptr->mem);
 	ddii_ptr->last_call_time_us = 0;
 	ddii_ptr->meas_event_num = 0;
-	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_S;
+	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_MS;
+	ddii_ptr->interval_measure_s = DDII_DEFAULT_INTERVAL_MESURE_S;
 	ddii_ptr->mode = COMBAT_MODE;
 	ddii_ptr->mko_bc_ptr->mko_rcv_flag = 0x00;
 }
@@ -99,9 +209,9 @@ void ddii_reset_parameters(typeDDIIStruct* ddii_ptr){
 int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct* interface){
 	uint8_t retval = 0;
     typeDDIIStruct* ddii_ptr = (typeDDIIStruct*)ctrl_struct;
-	ddii_ptr->curent_time = time_us;
+	ddii_ptr->curent_time_us = time_us;
 	/// запуск обработчика по интервалу
-	if ((time_us - ddii_ptr->last_call_time_us) > (ddii_ptr->interval_ms)) {
+	if ((time_us - ddii_ptr->last_call_time_us) > (ddii_ptr->interval_ms)*1000) {
 		ddii_ptr->last_call_time_us = time_us;
 		// user code begin
 		
@@ -109,9 +219,9 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 		retval = 1;
 	}
 	// отложенный запуск hvip
-	deferred_launch_hvip(ddii_ptr, 1, 1, 10E6);
+	// deferred_launch_hvip(ddii_ptr, 1, 1, 10E6);
 	// отложенный запуск mpp
-	deferred_launch_hvip(ddii_ptr, 2, 2, 5E6);
+	// deferred_launch_hvip(ddii_ptr, 2, 2, 5E6);
 	// проверка режима
 	if(ddii_ptr->mode != SILENT_MODE){
 		// обработка event-ов  //todo: сделать специальные фукнции обработки event-ов
@@ -127,7 +237,7 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 			if (ddii_ptr->mode == DEBUG_MODE){
 				interface->event[ddii_ptr->self_num] |= DDII_EVENT_MEAS_INTERVAL_START;
 			}
-			if (ddii_ptr->mode == COMBAT_MODE){
+			else{
 				//if (ddii_ptr->mko_bc_ptr->mko_rcv_flag){ // Проверка статуса МКО
 					interface->event[ddii_ptr->self_num] |= DDII_EVENT_MEAS_INTERVAL_START;
 					ddii_ptr->mko_bc_ptr->mko_rcv_flag &= 0;
@@ -151,16 +261,16 @@ int8_t ddii_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 		if (ddii_ptr->meas_cyclo.mode != CYCLO_MODE_WORK)
 			cyclo_stop(&ddii_ptr->meas_cyclo);
 	}
-	if (ddii_ptr->term_cyclo.mode != CYCLO_MODE_WORK){
-		cyclo_start(&ddii_ptr->term_cyclo);
-	}
-	cyclo_handler(&ddii_ptr->term_cyclo, time_us/1000);
+	// if (ddii_ptr->term_cyclo.mode != CYCLO_MODE_WORK){
+	// 	cyclo_start(&ddii_ptr->term_cyclo);
+	// }
+	// cyclo_handler(&ddii_ptr->term_cyclo, (uint32_t)(time_us/1000));
 	return retval;
 }
 
 void deferred_launch_hvip(typeDDIIStruct* ddii_ptr, uint8_t ch_num, uint8_t state, uint64_t deferred_time_us){
 	if ((ddii_ptr->cm->pwr.state & (1<<ch_num)) == 0x0){
-		if (ddii_ptr->curent_time > deferred_time_us){
+		if (ddii_ptr->curent_time_us > deferred_time_us){
 			pwr_on_off_by_num(&ddii_ptr->cm->pwr, ch_num, state);
 		} 
 	}
@@ -232,17 +342,18 @@ void ddii_mko_read_mem(typeDDIIStruct* ddii_ptr){
   */
 void ddii_meas_cycl_init(typeDDIIStruct* ddii_ptr)
 {
-	// циклограмма инициализации МПП
+	// инициализация циклограммы опроса МПП
 	cyclo_init(&ddii_ptr->meas_cyclo);
-	cyclo_init(&ddii_ptr->term_cyclo);
+	// инициализация циклограммы опроса термодатчиков
+	// cyclo_init(&ddii_ptr->term_cyclo);
 	//
 	ddii_ptr->meas_cyclo.mode = CYCLO_MODE_WORK;
-	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_start, (void*)ddii_ptr, ddii_ptr->interval_ms);
+	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_start, (void*)ddii_ptr, ddii_ptr->interval_measure_s*1000);
 	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_read, (void*)ddii_ptr, 0);
 	cyclo_add_step(&ddii_ptr->meas_cyclo, ddii_meas_cycl_frame_forming, (void*)ddii_ptr, 0);
 
 	ddii_ptr->term_cyclo.mode = CYCLO_MODE_WORK;
-	cyclo_add_step(&ddii_ptr->term_cyclo, ddii_term_cycl_start, (void*)ddii_ptr, 1000);
+	// cyclo_add_step(&ddii_ptr->term_cyclo, ddii_term_cycl_start, (void*)ddii_ptr, 1000);
 }
 
 /**
@@ -253,7 +364,7 @@ void ddii_meas_cycl_start(void* ctrl_struct)
 {
 	typeDDIIStruct* ddii_ptr = (typeDDIIStruct*) ctrl_struct;
 	ddii_start_mpp_measure(ddii_ptr, 1);
-	ddii_ptr->curent_time_measure = ddii_ptr->curent_time;
+	ddii_ptr->curent_time_measure_us = ddii_ptr->curent_time_us;
 	// ddii_read_data_frame(ddii_ptr);
 }
 
@@ -279,18 +390,23 @@ void ddii_meas_cycl_frame_forming(void* ctrl_struct)
 	typeDDIIStruct* ddii_ptr = (typeDDIIStruct*) ctrl_struct;
 	ddii_frame_forming(ddii_ptr);
 	ddii_write_frame_inmem(ddii_ptr);
+	ddii_reset_mpp_struct_measure(ddii_ptr);
+}
+
+uint32_t reverse_32bit_data_formko(uint32_t val){
+	return ((val >> 16) & 0xFFFF) | ((val & 0xFFFF) << 16);
 }
 
 void ddii_frame_struct_forming(typeDDIIStruct* ddii_ptr){
-	uint16_t duration_measure = 0, tmp[2], tmp2[2];
+	uint16_t duration_measure_s = 0, tmp[2], tmp2[2];
 	uint8_t i = 0;
 	uint32_t count_1_6 = 0;
 	uint16_t tmp_buf[sizeof(ddii_ptr->dataframe.constant_frame_data)];
 	if (ddii_ptr->mode != CONSTATNT_MODE){
 		// Длительность измерения
-		duration_measure = (uint16_t)((ddii_ptr->curent_time - ddii_ptr->curent_time_measure)/1000);
-		duration_measure = __REV16(duration_measure);
-		memcpy(&ddii_ptr->dataframe.frame.duration_meas, (uint8_t*)&duration_measure, 2);
+		duration_measure_s = (uint16_t)((ddii_ptr->interval_measure_s));
+		// duration_measure_s = __REV16(duration_measure_s);
+		memcpy(&ddii_ptr->dataframe.frame.duration_meas, (uint8_t*)&duration_measure_s, 2);
 		memcpy(&ddii_ptr->dataframe.frame.particle, (uint8_t*)&ddii_ptr->ddii_mpp_data.particle, sizeof(ddii_ptr->ddii_mpp_data.particle));
 		for(i = 0; i<sizeof(ddii_ptr->ddii_mpp_data.particle.hist.Hist16)/2; i++){
 				count_1_6 += ddii_ptr->ddii_mpp_data.particle.hist.Hist16[i];
@@ -298,12 +414,16 @@ void ddii_frame_struct_forming(typeDDIIStruct* ddii_ptr){
 		for(i = 3; i<6; i++){
 				count_1_6 += ddii_ptr->ddii_mpp_data.particle.hist.Hist32[i];
 		}
-		memcpy(tmp, (uint16_t*)&count_1_6, 4);
-		count_1_6 = __REV16(count_1_6);
-		for(i=0; i<2; i++){
-			tmp2[i] = tmp[1-i];
+		count_1_6 = reverse_32bit_data_formko(count_1_6);
+		for(i = 0; i < sizeof(ddii_ptr->ddii_mpp_data.particle.hist.Hist32); i++){
+			ddii_ptr->dataframe.frame.particle.hist.Hist32[i] = reverse_32bit_data_formko(ddii_ptr->ddii_mpp_data.particle.hist.Hist32[i]);
 		}
-		memcpy(&ddii_ptr->dataframe.frame.common_count_1_6, (uint16_t*)&tmp2, sizeof(count_1_6));	
+		// memcpy(tmp, (uint16_t*)&count_1_6, 4);
+		// count_1_6 = __REV16(count_1_6);
+		// for(i=0; i<2; i++){
+		// 	tmp2[i] = tmp[1-i];
+		// }
+		memcpy(&ddii_ptr->dataframe.frame.common_count_1_6, (uint16_t*)&count_1_6, sizeof(count_1_6));
 	}
 	else{
 		ddii_constant_data_forming(ddii_ptr);
@@ -315,69 +435,7 @@ void ddii_frame_struct_forming(typeDDIIStruct* ddii_ptr){
 	}
 }
 
-///////////////Функции взаимодействия с конфигурацией /////////////////
-/**
-	* @brief  Загрузка конфигурации ддии из памяти
-	* @param  ddii_ptr указатель на структуру управления
-  */
-void ddii_download_cfg(typeDDIIStruct* ddii_ptr){
-	uint8_t ddii_cfg[64] = {0};
-	int8_t status_read_mem = 0xFE;
-	status_read_mem = fr_mem_param_load(&ddii_ptr->mem, ddii_cfg);
-	memcpy(&ddii_ptr->cfg, ddii_cfg, sizeof(ddii_ptr->cfg));
-	if (status_read_mem >= 0){
-		if (ddii_ptr->cfg.head == HEAD){
-			ddii_set_cfg(ddii_ptr); // Не работает чтение из ПЗУ
-			// ddii_set_default_cfg(ddii_ptr);
-		}
-		else{
-			ddii_set_default_cfg(ddii_ptr);
-			fr_mem_format(&ddii_ptr->mem);
-		}
-	}
-	else{
-		ddii_set_default_cfg(ddii_ptr);
-	} 
-}
 
-/**
-	* @brief  Устанавка конфигурфции ДДИИ
-	* @param  ddii_ptr указатель на структуру управления
-  */
-void ddii_set_cfg(typeDDIIStruct* ddii_ptr){
-	uint8_t tmp_buf[HVIP_NUM*4*2];
-	ddii_set_cfg_mpp(ddii_ptr);
-	ddii_ptr->mpp->id = ddii_ptr->cfg.mpp_id;
-	ddii_ptr->interval_ms = ddii_ptr->cfg.interval_measure;
-	memcpy(tmp_buf, (uint8_t*)&ddii_ptr->cfg.hvip_voltage, sizeof(ddii_ptr->cfg.hvip_voltage));
-	memcpy(&tmp_buf[HVIP_NUM*4], (uint8_t*)&ddii_ptr->cfg.hvip_pwm_val, sizeof(ddii_ptr->cfg.hvip_voltage));
-	// ddii_cmd_set_voltage_pwm(ddii_ptr, tmp_buf);
-	ddii_ptr->voltage_correction_mode = ddii_ptr->voltage_correction_mode;
-	ddii_ptr->status_load_cfg_from_mem = LOADED_CFG;
-}
-
-/**
-	* @brief  Устанавка конфигурфции МПП
-	* @param  ddii_ptr указатель на структуру управления
-  */
-void ddii_set_cfg_mpp(typeDDIIStruct* ddii_ptr){
-	ddii_mpp_set_level_triger(ddii_ptr);
-	ddii_mpp_set_level_hh(ddii_ptr);
-}
-
-void ddii_download_cfg_inmem(typeDDIIStruct* ddii_ptr){
-	uint8_t cfg_buf[FRAM_FRAME_VOLUME_B] = {0};
-	memcpy(cfg_buf, (uint8_t*)&ddii_ptr->cfg, sizeof(ddii_ptr->cfg));
-	fr_mem_param_save(&ddii_ptr->mem, cfg_buf);
-}
-
-
-void ddii_update_cfg(typeDDIIStruct* ddii_ptr, uint8_t* data){
-	// reverse_data(data, cfg_data);
-	memcpy(&ddii_ptr->cfg, data, sizeof(ddii_ptr->cfg)-1);
-	ddii_set_cfg(ddii_ptr);
-	ddii_download_cfg_inmem(ddii_ptr);
-}
 
 void reverse_data(uint8_t* data, uint16_t* out_data){
 	uint16_t tmp_data[32] = {0}, i;
@@ -388,42 +446,6 @@ void reverse_data(uint8_t* data, uint16_t* out_data){
 	memcpy(out_data, tmp_data, sizeof(tmp_data));
 }
 
-/**
-	* @brief  Устанавка дефолтной конфигурфции
-	* @param  ddii_ptr указатель на структуру управления
-	*
-  */
-void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
-	uint16_t level_hh[8] = {0, 64, 128, 256, 512, 1024, 1100, 1200};
-	uint16_t level_trig[2] = {REG_MPP_LEVEL_TRIG, 10}, i; // {Команда МПП, Уровень}
-	float pwm_buf[3] = {20.43, 17.4, 17.806}, voltage_buf[3] = {27, 27, 27};
-	ddii_ptr->cfg.mpp_id = DDII_MPP_ID;
-	memcpy(ddii_ptr->cfg.hvip_pwm_val, pwm_buf, sizeof(pwm_buf));
-	memcpy(ddii_ptr->cfg.hvip_voltage, voltage_buf, sizeof(voltage_buf));
-	memcpy((uint16_t*)&ddii_ptr->cfg.mpp_HH, (uint16_t*)&level_hh, sizeof(level_hh));
-	memcpy((uint8_t*)&ddii_ptr->cfg.mpp_level_trig, (uint8_t*)&level_trig[1], sizeof(level_trig[1]));
-	ddii_ptr->cfg.head = HEAD;
-	for (i = 0; i < sizeof(level_hh)/2; i++){
-		level_hh[i] = __REV16(level_hh[i]);
-	}
-	for (i = 0; i < sizeof(level_trig)/2; i++){
-		level_trig[i] = __REV16(level_trig[i]);
-	}
-	// trig
-	if (ddii_ptr->mpp->ib->global_dbg_flag != 0x00)
-		ddii_ptr->mpp->ib->global_dbg_flag = 0x00;
-	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_COMAND, sizeof(level_trig)/2, level_trig);
-	// level hh
-	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_LEVEL_HH, sizeof(level_hh)/2, level_hh);
-	if (ddii_ptr->mode == DEBUG_MODE)
-		ddii_ptr->mpp->ib->global_dbg_flag = 0x01;
-	ddii_ptr->interval_ms = DDII_DEFAULT_INTERVAL_S;
-	ddii_ptr->cfg.interval_measure = DDII_DEFAULT_INTERVAL_S;
-	ddii_ptr->cfg.volt_corr_mode = 0;
-	// ddii_download_cfg_inmem(ddii_ptr);
-	ddii_ptr->status_load_cfg_from_mem = DEFAULT_CFG;
-}
-
 /////////////// Функции для взаимодействия с mpp /////////////////
 
 /**
@@ -432,12 +454,14 @@ void ddii_set_default_cfg(typeDDIIStruct* ddii_ptr){
   */
 void ddii_mpp_set_level_triger(typeDDIIStruct* ddii_ptr){
 	uint16_t data[2] = {REG_MPP_LEVEL_TRIG, 0};
+	uint16_t i;
+
 	data[1] = ddii_ptr->cfg.mpp_level_trig;
 	if (ddii_ptr->mpp->ib->global_dbg_flag != 0x00)
 		ddii_ptr->mpp->ib->global_dbg_flag = 0x00;
-	// for (i = 0; i < 2; i++){
-	// 	data[i] = __REV16(data[i]);
-	// }
+	for (i = 0; i < 2; i++){
+		data[i] = __REV16(data[i]);
+	}
 	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_COMAND, sizeof(data), data);
 	if (ddii_ptr->mode == DEBUG_MODE)
 		ddii_ptr->mpp->ib->global_dbg_flag = 0x01;
@@ -448,12 +472,14 @@ void ddii_mpp_set_level_triger(typeDDIIStruct* ddii_ptr){
 	* @param  ddii_ptr указатель на структуру управления
   */
 void ddii_mpp_set_level_hh(typeDDIIStruct* ddii_ptr){
-	uint16_t* data = ddii_ptr->cfg.mpp_HH;
+	uint16_t data[32];
+	uint16_t i;
+	memcpy(data, (uint16_t*)&ddii_ptr->cfg.mpp_HH, sizeof(ddii_ptr->cfg.mpp_HH));
 	if (ddii_ptr->mpp->ib->global_dbg_flag != 0x00)
 		ddii_ptr->mpp->ib->global_dbg_flag = 0x00;
-	// for (i = 0; i < 8; i++){
-	// 	data[i] = __REV16(data[i]);
-	// }
+	for (i = 0; i < 8; i++){
+		data[i] = __REV16(data[i]);
+	}
 	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_LEVEL_HH, sizeof(ddii_ptr->cfg.mpp_HH), data);
 	if (ddii_ptr->mode == DEBUG_MODE)
 		ddii_ptr->mpp->ib->global_dbg_flag = 0x01;
@@ -506,7 +532,6 @@ void ddii_reset_mpp_struct_measure(typeDDIIStruct* ddii_ptr){
 	memset(ctrl_data, 0x00, sizeof(ddii_ptr->ddii_mpp_data));
 	ddii_start_mpp_measure(ddii_ptr, 0);
 	ib_run_transaction(ddii_ptr->mpp->ib, ddii_ptr->mpp->id, MB_F_CODE_16, REG_MPP_HIST, len, ctrl_data);
-	ddii_download_cfg(ddii_ptr);
 }
 
 /////////////// Кадры МКО /////////////////
@@ -546,7 +571,7 @@ int8_t ddii_frame_forming(typeDDIIStruct* ddii_ptr)
 			// if (ddii_ptr->mode == COMBAT_MODE){
 			ddii_frame_struct_forming(ddii_ptr);
 			memcpy(ddii_ptr->frame.ddii.meas.data, &ddii_ptr->dataframe, sizeof(ddii_ptr->dataframe));
-				// ddii_put_data_in_row_frame_mko(ddii_ptr);
+			// ddii_put_data_in_row_frame_mko(ddii_ptr);
 			// 	// memcpy((uint8_t*)&ddii_ptr->frame.row.data, (uint8_t*)&rec_tmp, sizeof(typeDDIIRec));
 			// }
 			//
@@ -700,11 +725,38 @@ void ddii_cmd_set_voltage_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data){
 	}
 }
 
+void ddii_cmd_set_voltage(typeDDIIStruct* ddii_ptr, uint8_t *data){
+	uint32_t tmp_buf[HVIP_NUM], i;
+	memcpy(tmp_buf, data, sizeof(tmp_buf));
+	for(i =0; i < HVIP_NUM; i++){
+		tmp_buf[i] = ((tmp_buf[i] >> 16) & 0xFFFF) | ((tmp_buf[i] & 0xFFFF) << 16);
+		memcpy(&ddii_ptr->cm->hvip[i].v_hv_desired, &tmp_buf[i], sizeof(ddii_ptr->cm->hvip->v_hv_desired));
+	}
+}
+
+void ddii_cmd_set_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data){
+	uint32_t tmp_buf[HVIP_NUM], i;
+	memcpy(tmp_buf, data, sizeof(tmp_buf));
+	for(i =0; i < HVIP_NUM; i++){
+		tmp_buf[i] = ((tmp_buf[i] >> 16) & 0xFFFF) | ((tmp_buf[i] & 0xFFFF) << 16);
+		memcpy(&ddii_ptr->cm->hvip[i].pwm_val_float, &tmp_buf[i], sizeof(ddii_ptr->cm->hvip->pwm_val_float));
+	}
+}
+
+void ddii_cmd_set_max_pwm(typeDDIIStruct* ddii_ptr, uint8_t *data){
+	uint32_t tmp_buf[HVIP_NUM], i;
+	memcpy(tmp_buf, data, sizeof(tmp_buf));
+	for(i =0; i < HVIP_NUM; i++){
+		tmp_buf[i] = ((tmp_buf[i] >> 16) & 0xFFFF) | ((tmp_buf[i] & 0xFFFF) << 16);
+		memcpy(&ddii_ptr->cm->hvip[i].max_pwm_val, &tmp_buf[i], sizeof(ddii_ptr->cm->hvip->max_pwm_val));
+	}
+}
+
 void ddii_struct_telemetria_forming(typeDDIIStruct* ddii_ptr){
 	ddii_ptr->telmtr_struct.ddii_mode   			=	ddii_ptr->mode;
 	ddii_ptr->telmtr_struct.Level   				=	ddii_ptr->ddii_mpp_data.Level;
 	ddii_ptr->telmtr_struct.csa_test_on   			=	ddii_ptr->csa_test.enable_test;
-	ddii_ptr->telmtr_struct.ddii_interval_request   =	ddii_ptr->interval_ms;
+	ddii_ptr->telmtr_struct.ddii_interval_request   =	(uint16_t)(ddii_ptr->interval_measure_s);
 	ddii_ptr->telmtr_struct.ACQ1_Peack   			=	ddii_ptr->ddii_mpp_data.ACQ1_Peak;
 	ddii_ptr->telmtr_struct.ACQ2_Peack   			=	ddii_ptr->ddii_mpp_data.ACQ2_Peak;
 	ddii_ptr->telmtr_struct.rd_ptr					=	ddii_ptr->mem.read_ptr;
